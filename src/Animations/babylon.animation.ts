@@ -135,6 +135,8 @@
                 dataType = Animation.ANIMATIONTYPE_VECTOR2;
             } else if (from instanceof Color3) {
                 dataType = Animation.ANIMATIONTYPE_COLOR3;
+            } else if (from instanceof Color4) {
+                dataType = Animation.ANIMATIONTYPE_COLOR4;
             } else if (from instanceof Size) {
                 dataType = Animation.ANIMATIONTYPE_SIZE;
             }
@@ -318,7 +320,7 @@
          */
         public toString(fullDetails?: boolean): string {
             var ret = "Name: " + this.name + ", property: " + this.targetProperty;
-            ret += ", datatype: " + (["Float", "Vector3", "Quaternion", "Matrix", "Color3", "Vector2"])[this.dataType];
+            ret += ", datatype: " + (["Float", "Vector3", "Quaternion", "Matrix", "Color3", "Vector2", "Color4"])[this.dataType];
             ret += ", nKeys: " + (this._keys ? this._keys.length : "none");
             ret += ", nRanges: " + (this._ranges ? Object.keys(this._ranges).length : "none");
             if (fullDetails) {
@@ -456,6 +458,10 @@
             return Color3.Lerp(startValue, endValue, gradient);
         }
 
+        public color4InterpolateFunction(startValue: Color4, endValue: Color4, gradient: number): Color4 {
+            return Color4.Lerp(startValue, endValue, gradient);
+        }
+
         /**
          * Defines the function to use to interpolate matrices
          * @param startValue defines the start matrix
@@ -536,6 +542,7 @@
                     case Animation.ANIMATIONTYPE_MATRIX:
                     case Animation.ANIMATIONTYPE_VECTOR3:
                     case Animation.ANIMATIONTYPE_COLOR3:
+                    case Animation.ANIMATIONTYPE_COLOR4:
                         key.values = animationKey.value.asArray();
                         break;
                 }
@@ -567,7 +574,8 @@
         private static _ANIMATIONTYPE_MATRIX = 3;
         private static _ANIMATIONTYPE_COLOR3 = 4;
         private static _ANIMATIONTYPE_VECTOR2 = 5;
-        private static _ANIMATIONTYPE_SIZE = 6;
+        private static _ANIMATIONTYPE_COLOR4 = 6;
+        private static _ANIMATIONTYPE_SIZE = 7;
         private static _ANIMATIONLOOPMODE_RELATIVE = 0;
         private static _ANIMATIONLOOPMODE_CYCLE = 1;
         private static _ANIMATIONLOOPMODE_CONSTANT = 2;
@@ -598,6 +606,10 @@
 
         public static get ANIMATIONTYPE_COLOR3(): number {
             return Animation._ANIMATIONTYPE_COLOR3;
+        }
+
+        public static get ANIMATIONTYPE_COLOR4(): number {
+            return Animation._ANIMATIONTYPE_COLOR4;
         }
 
         public static get ANIMATIONLOOPMODE_RELATIVE(): number {
@@ -663,6 +675,9 @@
                         break;
                     case Animation.ANIMATIONTYPE_COLOR3:
                         data = Color3.FromArray(key.values);
+                        break;
+                    case Animation.ANIMATIONTYPE_COLOR4:
+                        data = Color4.FromArray(key.values);
                         break;
                     case Animation.ANIMATIONTYPE_VECTOR3:
                     default:

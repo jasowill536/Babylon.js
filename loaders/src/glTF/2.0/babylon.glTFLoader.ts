@@ -777,7 +777,12 @@ module BABYLON.GLTF2 {
             return Promise.all(promises).then(() => {});
         }
 
-        private _loadAnimationAsync(context: string, animation: ILoaderAnimation): Promise<void> {
+        public _loadAnimationAsync(context: string, animation: ILoaderAnimation): Promise<void> {
+            const promise = GLTFLoaderExtension._LoadAnimationAsync(this, context, animation);
+            if (promise) {
+                return promise;
+            }
+
             const babylonAnimationGroup = new AnimationGroup(animation.name || `animation${animation._index}`, this._babylonScene);
             animation._babylonAnimationGroup = babylonAnimationGroup;
 
@@ -945,7 +950,7 @@ module BABYLON.GLTF2 {
             });
         }
 
-        private _loadAnimationSamplerAsync(context: string, sampler: ILoaderAnimationSampler): Promise<ILoaderAnimationSamplerData> {
+        public _loadAnimationSamplerAsync(context: string, sampler: ILoaderAnimationSampler): Promise<ILoaderAnimationSamplerData> {
             if (sampler._data) {
                 return sampler._data;
             }
