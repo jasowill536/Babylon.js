@@ -214,6 +214,15 @@
                                 case Animation.ANIMATIONLOOPMODE_RELATIVE:
                                     return this._animation.color3InterpolateFunction(startValue, endValue, gradient).add(offsetValue.scale(repeatCount));
                             }
+                        // Color4
+                        case Animation.ANIMATIONTYPE_COLOR4:
+                            switch (loopMode) {
+                                case Animation.ANIMATIONLOOPMODE_CYCLE:
+                                case Animation.ANIMATIONLOOPMODE_CONSTANT:
+                                    return this._animation.color4InterpolateFunction(startValue, endValue, gradient);
+                                case Animation.ANIMATIONLOOPMODE_RELATIVE:
+                                    return this._animation.color4InterpolateFunction(startValue, endValue, gradient).add(offsetValue.scale(repeatCount));
+                            }
                         // Matrix
                         case Animation.ANIMATIONTYPE_MATRIX:
                             switch (loopMode) {
@@ -449,6 +458,9 @@
                             // Color3
                             case Animation.ANIMATIONTYPE_COLOR3:
                                 this._offsetsCache[keyOffset] = toValue.subtract(fromValue);
+                            // Color4
+                            case Animation.ANIMATIONTYPE_COLOR4:
+                                this._offsetsCache[keyOffset] = toValue.subtract(fromValue);
                             default:
                                 break;
                         }
@@ -486,6 +498,9 @@
                     // Color3
                     case Animation.ANIMATIONTYPE_COLOR3:
                         offsetValue = Color3.Black();
+                    // Color4
+                    case Animation.ANIMATIONTYPE_COLOR4:
+                        offsetValue = new Color4(0, 0, 0, 1);
                 }
             }
 

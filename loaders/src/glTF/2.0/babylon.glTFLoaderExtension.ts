@@ -32,6 +32,10 @@ module BABYLON.GLTF2 {
         /** Override this method to modify the default behavior for loading uris. */
         protected _loadUriAsync(context: string, uri: string): Nullable<Promise<ArrayBufferView>> { return null; }
 
+        /** Override this method to modify the default behavior for loading animations. */
+        protected _loadAnimationAsync(context: string, animation: ILoaderAnimation): Nullable<Promise<void>> { return null; }
+
+
         // #endregion
 
         /** Helper method called by a loader extension to load an glTF extension. */
@@ -82,6 +86,11 @@ module BABYLON.GLTF2 {
         /** Helper method called by the loader to allow extensions to override loading uris. */
         public static _LoadUriAsync(loader: GLTFLoader, context: string, uri: string): Nullable<Promise<ArrayBufferView>> {
             return loader._applyExtensions(extension => extension._loadUriAsync(context, uri));
+        }
+
+        /** Helper method called by the loader to allow extensions to override loading animations. */
+        public static _LoadAnimationAsync(loader: GLTFLoader, context: string, animation: ILoaderAnimation): Nullable<Promise<void>> {
+            return loader._applyExtensions(extension => extension._loadAnimationAsync(context, animation));
         }
     }
 }

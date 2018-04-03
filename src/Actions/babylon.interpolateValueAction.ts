@@ -35,6 +35,8 @@
                 dataType = Animation.ANIMATIONTYPE_FLOAT;
             } else if (this.value instanceof Color3) {
                 dataType = Animation.ANIMATIONTYPE_COLOR3;
+            } else if (this.value instanceof Color4) {
+                dataType = Animation.ANIMATIONTYPE_COLOR4;
             } else if (this.value instanceof Vector3) {
                 dataType = Animation.ANIMATIONTYPE_VECTOR3;
             } else if (this.value instanceof Matrix) {
