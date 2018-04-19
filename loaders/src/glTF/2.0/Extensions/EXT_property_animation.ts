@@ -56,7 +56,38 @@ module BABYLON.GLTF2.Extensions {
                     //     _targetPath: 'outerConeAngle'
                     // }
                 }
+            },
+            MSFT_audio_emitter: {
+                emitters: {
+                    _isIndexed: true,
+                    _getTarget: function (gltf: ILoaderGLTF, index: number) {
+                        if (gltf.extensions && 
+                            gltf.extensions.MSFT_audio_emitter &&
+                             gltf.extensions.MSFT_audio_emitter.emitters &&
+                             gltf.extensions.MSFT_audio_emitter.emitters.length > index) {
+                            return gltf.extensions.MSFT_audio_emitter.emitters[index]._babylonData.sound;
+                        }
+                        return undefined;
+                    },
+                    volume: {
+                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
+                        _targetPath: 'volume'
+                    },
+                    direction: {
+                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_VECTOR3,
+                        _targetPath: 'direction'
+                    },
+                    innerAngle: {
+                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
+                        _targetPath: 'directionalConeInnerAngle'
+                    },
+                    outerAngle: {
+                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
+                        _targetPath: 'directionalConeOuterAngle'
+                    },
+                }
             }
+
         },
         materials: {
             _isIndexed: true,
