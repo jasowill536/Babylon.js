@@ -5,40 +5,40 @@ module BABYLON.GLTF2.Extensions {
 
     const NAME = "MSFT_audio_emitter";
 
-    interface IClipReference {
+    interface _IClipReference {
         clip: number;
         weight?: number;
     }
 
-    interface IEmittersReference {
+    interface _IEmittersReference {
         emitters: number[];
     }
 
-    interface IEmitter {
+    interface _IEmitter {
         name?: string;
         direction?: number[];
         innerAngle?: number;
         outerAngle?: number;
         loop?: boolean;
         volume?: number;
-        clips: IClipReference[];
+        clips: _IClipReference[];
     }
 
-    const enum AudioMimeType {
+    const enum _AudioMimeType {
         WAV = "audio/wav",
     }
 
-    interface IClip {
+    interface _IClip {
         uri?: string;
         bufferView?: number;
-        mimeType?: AudioMimeType;
+        mimeType?: _AudioMimeType;
     }
 
-    interface ILoaderClip extends IClip, _IArrayItem {
+    interface _ILoaderClip extends _IClip, _IArrayItem {
         _objectURL?: Promise<string>;
     }
 
-    interface ILoaderEmitter extends IEmitter, _IArrayItem {
+    interface _ILoaderEmitter extends _IEmitter, _IArrayItem {
         _babylonData?: { 
             sound?: WeightedSound;
             meshes: AbstractMesh[];
@@ -47,28 +47,28 @@ module BABYLON.GLTF2.Extensions {
         _babylonSounds: Sound[];
     }
 
-    interface IMSFTAudioEmitter {
-        clips: ILoaderClip[];
-        emitters: ILoaderEmitter[];
+    interface _IMSFTAudioEmitter {
+        clips: _ILoaderClip[];
+        emitters: _ILoaderEmitter[];
     }
 
-    const enum AnimationEventAction {
+    const enum _AnimationEventAction {
         play = "play",
         stop = "stop",
     }
 
-    interface IAnimationEvent {
-        action: AnimationEventAction,
+    interface _IAnimationEvent {
+        action: _AnimationEventAction,
         emitter: number;
         time: number;
         offset?: number;
     }
 
-    interface ILoaderAnimationEvent extends IAnimationEvent, _IArrayItem {
+    interface _ILoaderAnimationEvent extends _IAnimationEvent, _IArrayItem {
     }
 
-    interface ILoaderAnimationEvents {
-        events: ILoaderAnimationEvent[];
+    interface _ILoaderAnimationEvents {
+        events: _ILoaderAnimationEvent[];
     }
 
     export class WeightedSound {
@@ -201,7 +201,7 @@ module BABYLON.GLTF2.Extensions {
     export class MSFT_audio_emitter extends GLTFLoaderExtension {
         public readonly name = NAME;
 
-        private _loadClipAsync(context: string, clip: ILoaderClip): Promise<string> {
+        private _loadClipAsync(context: string, clip: _ILoaderClip): Promise<string> {
             if (clip._objectURL) {
                 return clip._objectURL;
             }
@@ -222,7 +222,7 @@ module BABYLON.GLTF2.Extensions {
             return clip._objectURL;
         }
 
-        private _loadEmitterAsync(context: string, emitter: ILoaderEmitter, babylonMesh?: Mesh): Promise<void> {
+        private _loadEmitterAsync(context: string, emitter: _ILoaderEmitter, babylonMesh?: Mesh): Promise<void> {
             emitter._babylonSounds = emitter._babylonSounds || [];
             if (!emitter._babylonData) {
                 const clipPromises = new Array<Promise<void>>();
@@ -236,6 +236,7 @@ module BABYLON.GLTF2.Extensions {
                 let innerAngle = emitter.innerAngle;
                 let outerAngle = emitter.outerAngle;
 
+                _ArrayItem.Assign(this._clips);
                 for (let i = 0; i < emitter.clips.length; i++) {
                     const clip = GLTFLoader._GetProperty(`#/extensions/${this.name}/clips`, this._clips, emitter.clips[i].clip);
                     clipPromises.push(this._loadClipAsync(`#/extensions/${NAME}/clips/${emitter.clips[i].clip}`, clip).then((objectURL: string) => {
@@ -274,10 +275,11 @@ module BABYLON.GLTF2.Extensions {
         }
 
         protected _loadSceneAsync(context: string, scene: _ILoaderScene): Nullable<Promise<void>> { 
-            return this._loadExtensionAsync<IEmittersReference>(context, scene, (extensionContext, extension) => {
+            return this._loadExtensionAsync<_IEmittersReference>(context, scene, (extensionContext, extension) => {
                 return this._loader._loadSceneAsync(extensionContext, scene).then(() => {
 
                     const promises = new Array<Promise<void>>();
+                    _ArrayItem.Assign(this._emitters);
                     for (const emitterIndex of extension.emitters) {
                         const emitter = GLTFLoader._GetProperty(extensionContext, this._emitters, emitterIndex);
                         if (emitter.direction || emitter.innerAngle || emitter.outerAngle) {
@@ -293,9 +295,11 @@ module BABYLON.GLTF2.Extensions {
         }
 
         protected _loadNodeAsync(context: string, node: _ILoaderNode): Nullable<Promise<void>> { 
-            return this._loadExtensionAsync<IEmittersReference>(context, node, (extensionContext, extension) => {
+            return this._loadExtensionAsync<_IEmittersReference>(context, node, (extensionContext, extension) => {
                 return this._loader._loadNodeAsync(extensionContext, node).then(() => {
+
                     const promises = new Array<Promise<void>>();
+                    _ArrayItem.Assign(this._emitters);
                     for (const emitterIndex of extension.emitters) {
                         const emitter = GLTFLoader._GetProperty(extensionContext, this._emitters, emitterIndex);
                         promises.push(this._loadEmitterAsync(`#/extensions/${this.name}/emitter/${emitter._index}`, emitter, node._babylonMesh));
@@ -307,11 +311,12 @@ module BABYLON.GLTF2.Extensions {
         }
 
         protected _loadAnimationAsync(context: string, animation: _ILoaderAnimation): Nullable<Promise<void>> { 
-            return this._loadExtensionAsync<ILoaderAnimationEvents>(context, animation, (extensionContext, extension) => {
+            return this._loadExtensionAsync<_ILoaderAnimationEvents>(context, animation, (extensionContext, extension) => {
                 return this._loader._loadAnimationAsync(extensionContext, animation).then(() => {
                     const promises = new Array<Promise<void>>();
                     let babylonAnimationGroup = animation._babylonAnimationGroup;
 
+                    _ArrayItem.Assign(extension.events);
                     for (const event of extension.events) {
                         promises.push(this._loadAnimationEventAsync(`${context}/extension/${NAME}/events/${event._index}`, context, animation, event, babylonAnimationGroup!));
                     }
@@ -323,7 +328,7 @@ module BABYLON.GLTF2.Extensions {
             });
         }
 
-        private _loadAnimationEventAsync(context: string, animationContext: string, animation: _ILoaderAnimation, event: ILoaderAnimationEvent, babylonAnimationGroup: AnimationGroup): Promise<void> {
+        private _loadAnimationEventAsync(context: string, animationContext: string, animation: _ILoaderAnimation, event: _ILoaderAnimationEvent, babylonAnimationGroup: AnimationGroup): Promise<void> {
             if (babylonAnimationGroup.targetedAnimations.length == 0) {
                 return Promise.resolve();
             }
@@ -336,9 +341,9 @@ module BABYLON.GLTF2.Extensions {
                 const offset = event.offset;
 
                 var babylonAnimationEvent = new AnimationEvent(event.time, () => {
-                    if (action == AnimationEventAction.play) {
+                    if (action == _AnimationEventAction.play) {
                         sound.play(offset);
-                    } else if (action == AnimationEventAction.stop) {
+                    } else if (action == _AnimationEventAction.stop) {
                         sound.stop(offset);
                     }
                 });
@@ -347,20 +352,20 @@ module BABYLON.GLTF2.Extensions {
             return Promise.resolve();
         }
 
-        private get _extension(): IMSFTAudioEmitter {
+        private get _extension(): _IMSFTAudioEmitter {
             const extensions = this._loader._gltf.extensions;
             if (!extensions || !extensions[this.name]) {
                 throw new Error(`#/extensions: '${this.name}' not found`);
             }
 
-            return extensions[this.name] as IMSFTAudioEmitter;
+            return extensions[this.name] as _IMSFTAudioEmitter;
         }
 
-        private get _clips(): Array<ILoaderClip> {
+        private get _clips(): Array<_ILoaderClip> {
             return this._extension.clips;
         }
 
-        private get _emitters(): Array<ILoaderEmitter> {
+        private get _emitters(): Array<_ILoaderEmitter> {
             return this._extension.emitters;
         }
     }

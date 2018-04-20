@@ -10,14 +10,14 @@ module BABYLON.GLTF2.Extensions {
         sampler: number;
     }
 
-    interface ILoaderPropertyAnimationChannel extends _IPropertyAnimationChannel, _IArrayItem {
+    interface _ILoaderPropertyAnimationChannel extends _IPropertyAnimationChannel, _IArrayItem {
     }
 
-    interface ILoaderPropertyAnimationChannels {
-        channels: ILoaderPropertyAnimationChannel[];
+    interface _ILoaderPropertyAnimationChannels {
+        channels: _ILoaderPropertyAnimationChannel[];
     }
 
-    interface ILoaderPropertyAnimationTarget {
+    interface _ILoaderPropertyAnimationTarget {
         targetPath: string;
         animationType: number;
         object: any;
@@ -51,10 +51,10 @@ module BABYLON.GLTF2.Extensions {
                     //     _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
                     //     _targetPath: 'innerConeAngle'
                     // },
-                    // outerConeAngle: {
-                    //     _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
-                    //     _targetPath: 'outerConeAngle'
-                    // }
+                    outerConeAngle: {
+                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
+                        _targetPath: 'angle'
+                    }
                 }
             },
             MSFT_audio_emitter: {
@@ -119,8 +119,9 @@ module BABYLON.GLTF2.Extensions {
         public readonly name = NAME;
 
         protected _loadAnimationAsync(context: string, animation: _ILoaderAnimation): Nullable<Promise<void>> { 
-            return this._loadExtensionAsync<ILoaderPropertyAnimationChannels>(context, animation, (extensionContext, extension) => {
+            return this._loadExtensionAsync<_ILoaderPropertyAnimationChannels>(context, animation, (extensionContext, extension) => {
                 return this._loader._loadAnimationAsync(extensionContext, animation).then(() => {
+                    _ArrayItem.Assign(extension.channels);
                     const promises = new Array<Promise<void>>();
                     let babylonAnimationGroup = animation._babylonAnimationGroup;
 
@@ -225,7 +226,7 @@ module BABYLON.GLTF2.Extensions {
                 }
 
                 const animationName = `${babylonAnimationGroup.name}_${NAME}_channel${babylonAnimationGroup.targetedAnimations.length}`;
-                const babylonAnimation = new Animation(animationName, target.targetPath, 1, target.animationType);
+                const babylonAnimation = new Animation(animationName, target.targetPath, 1, target.animationType == Animation.ANIMATIONTYPE_COLOR4 ? Animation.ANIMATIONTYPE_COLOR3 : target.animationType);
                 babylonAnimation.setKeys(keys);
 
                 if (target.object != undefined) {
@@ -255,8 +256,8 @@ module BABYLON.GLTF2.Extensions {
             });
         }
 
-        private _getAnimationObject(context: string, animationContext: string, target: string): ILoaderPropertyAnimationTarget {
-            let result: ILoaderPropertyAnimationTarget = {
+        private _getAnimationObject(context: string, animationContext: string, target: string): _ILoaderPropertyAnimationTarget {
+            let result: _ILoaderPropertyAnimationTarget = {
                 targetPath: '',
                 animationType: 0,
                 object: null
