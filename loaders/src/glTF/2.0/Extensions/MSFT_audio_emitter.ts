@@ -58,16 +58,10 @@ module BABYLON.GLTF2.Extensions {
     }
 
     interface IAnimationEvent {
-        time: number;
         action: AnimationEventAction,
-        offset?: number;
-        target: IAnimationEventTarget;
-    }
-
-    interface IAnimationEventTarget {
-        node?: number;
-        scene?: number;
         emitter: number;
+        time: number;
+        offset?: number;
     }
 
     interface ILoaderAnimationEvent extends IAnimationEvent, IArrayItem {
@@ -334,7 +328,7 @@ module BABYLON.GLTF2.Extensions {
                 return Promise.resolve();
             }
             const babylonAnimation = babylonAnimationGroup.targetedAnimations[0];
-            const emitterIndex = event.target.emitter;
+            const emitterIndex = event.emitter;
             const emitter = GLTFLoader._GetProperty(context, this._emitters, emitterIndex);
             const sound = emitter._babylonData!.sound;
             if (sound) {
