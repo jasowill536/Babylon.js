@@ -12,6 +12,7 @@ module BABYLON {
         public distanceModel: string = "linear";
         private _panningModel: string = "equalpower";
         public onended: () => any;
+        public onEndedObservable = new Observable<Sound>();
         private _playbackRate: number = 1;
         private _streaming: boolean = false;
         private _startTime: number = 0;
@@ -541,6 +542,7 @@ module BABYLON {
             if (this.onended) {
                 this.onended();
             }
+            this.onEndedObservable.notifyObservers(this);
         }
 
         /**

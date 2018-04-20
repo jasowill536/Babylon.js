@@ -93,7 +93,7 @@ module BABYLON.GLTF2.Extensions {
             this._weights = weights;
             this._sounds = sounds;
             for (let sound of this._sounds) {
-                sound.onended = () => { this._onended() };
+                sound.onEndedObservable.add(() => { this._onended() });
             }
         }
 

@@ -40,9 +40,9 @@ module INSPECTOR {
             else {
                 (this._obj as BABYLON.Sound).play();
             }
-            (this._obj as BABYLON.Sound).onended = () => {
+            (this._obj as BABYLON.Sound).onEndedObservable.add(() => {
                 callback();
-            }
+            }, -1, false, null, true);
         }
     }
 }

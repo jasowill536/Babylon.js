@@ -866,6 +866,15 @@
                                 case Animation.ANIMATIONLOOPMODE_RELATIVE:
                                     return this.color3InterpolateFunction(startValue, endValue, gradient).add(offsetValue.scale(repeatCount));
                             }
+                        // Color4
+                        case Animation.ANIMATIONTYPE_COLOR4:
+                            switch (loopMode) {
+                                case Animation.ANIMATIONLOOPMODE_CYCLE:
+                                case Animation.ANIMATIONLOOPMODE_CONSTANT:
+                                    return this.color4InterpolateFunction(startValue, endValue, gradient);
+                                case Animation.ANIMATIONLOOPMODE_RELATIVE:
+                                    return this.color4InterpolateFunction(startValue, endValue, gradient).add(offsetValue.scale(repeatCount));
+                            }
                         // Matrix
                         case Animation.ANIMATIONTYPE_MATRIX:
                             switch (loopMode) {
