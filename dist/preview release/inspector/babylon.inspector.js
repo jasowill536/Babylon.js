@@ -1,4 +1,3 @@
-"use strict";
 var INSPECTOR;
 (function (INSPECTOR) {
     var Inspector = /** @class */ (function () {
@@ -199,6 +198,7 @@ var INSPECTOR;
                     return this._getRelativeParent(elem.parentElement, true);
                 }
             }
+            // looking for the relative parent of the element 
             else {
                 if (computedStyle.position == "static") {
                     return elem.parentElement;
@@ -354,7 +354,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=Inspector.js.map
 
-"use strict";
 /// <reference path="../../dist/preview release/babylon.d.ts"/>
 var INSPECTOR;
 (function (INSPECTOR) {
@@ -483,7 +482,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=properties.js.map
 
-"use strict";
 /// <reference path="../../dist/preview release/gui/babylon.gui.d.ts"/>
 var INSPECTOR;
 (function (INSPECTOR) {
@@ -604,7 +602,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=properties_gui.js.map
 
-"use strict";
 var INSPECTOR;
 (function (INSPECTOR) {
     /**
@@ -636,7 +633,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=BasicElement.js.map
 
-"use strict";
 var INSPECTOR;
 (function (INSPECTOR) {
     var Adapter = /** @class */ (function () {
@@ -674,7 +670,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=Adapter.js.map
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -734,7 +729,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=CameraAdapter.js.map
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -796,7 +790,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=PhysicsImpostorAdapter.js.map
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -848,7 +841,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=GUIAdapter.js.map
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -905,7 +897,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=SoundAdapter.js.map
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -952,7 +943,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=TextureAdapter.js.map
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -1004,7 +994,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=LightAdapter.js.map
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -1049,7 +1038,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=MaterialAdapter.js.map
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -1157,7 +1145,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=MeshAdapter.js.map
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -1363,7 +1350,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=DetailPanel.js.map
 
-"use strict";
 var INSPECTOR;
 (function (INSPECTOR) {
     /**
@@ -1415,7 +1401,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=Property.js.map
 
-"use strict";
 var INSPECTOR;
 (function (INSPECTOR) {
     var PropertyFormatter = /** @class */ (function () {
@@ -1517,10 +1502,10 @@ var INSPECTOR;
          */
         PropertyLine.prototype._validateInput = function (e) {
             this._input.removeEventListener('focusout', this._focusOutInputHandler);
-            if (e.keyCode == 13) {
+            if (e.keyCode == 13) { // Enter
                 this.validateInput(this._input.value);
             }
-            else if (e.keyCode == 9) {
+            else if (e.keyCode == 9) { // Tab
                 e.preventDefault();
                 this.validateInput(this._input.value);
             }
@@ -1698,7 +1683,7 @@ var INSPECTOR;
             if (typeof this.value === 'boolean') {
                 this._checkboxInput();
             }
-            else if (this._isSliderType()) {
+            else if (this._isSliderType()) { // Add slider when parent have slider property
                 this._rangeInput();
             }
             else {
@@ -1904,7 +1889,7 @@ var INSPECTOR;
          */
         PropertyLine.prototype._checkboxInput = function () {
             var _this = this;
-            if (this._valueDiv.childElementCount < 1) {
+            if (this._valueDiv.childElementCount < 1) { // Prevent display two checkbox
                 this._input = INSPECTOR.Helpers.CreateInput('checkbox-element', this._valueDiv);
                 this._input.type = 'checkbox';
                 this._input.checked = this.value;
@@ -1915,7 +1900,7 @@ var INSPECTOR;
             }
         };
         PropertyLine.prototype._rangeInput = function () {
-            if (this._valueDiv.childElementCount < 1) {
+            if (this._valueDiv.childElementCount < 1) { // Prevent display two input range
                 this._input = INSPECTOR.Helpers.CreateInput('slider-element', this._valueDiv);
                 this._input.type = 'range';
                 this._input.style.display = 'inline-block';
@@ -1960,7 +1945,6 @@ var INSPECTOR;
 
 //# sourceMappingURL=PropertyLine.js.map
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2010,7 +1994,6 @@ var INSPECTOR;
     INSPECTOR.ColorElement = ColorElement;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2081,7 +2064,6 @@ var INSPECTOR;
     INSPECTOR.ColorPickerElement = ColorPickerElement;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2199,7 +2181,6 @@ var INSPECTOR;
     INSPECTOR.CubeTextureElement = CubeTextureElement;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2244,7 +2225,6 @@ var INSPECTOR;
     INSPECTOR.HDRCubeTextureElement = HDRCubeTextureElement;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2321,7 +2301,6 @@ var INSPECTOR;
     INSPECTOR.SearchBarDetails = SearchBarDetails;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2368,7 +2347,6 @@ var INSPECTOR;
     INSPECTOR.TextureElement = TextureElement;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var INSPECTOR;
 (function (INSPECTOR) {
     /**
@@ -2394,7 +2372,6 @@ var INSPECTOR;
     INSPECTOR.Tooltip = Tooltip;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var INSPECTOR;
 (function (INSPECTOR) {
     var Helpers = /** @class */ (function () {
@@ -2609,7 +2586,6 @@ var INSPECTOR;
     INSPECTOR.Helpers = Helpers;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var INSPECTOR;
 (function (INSPECTOR) {
     var Scheduler = /** @class */ (function () {
@@ -2656,7 +2632,6 @@ var INSPECTOR;
     INSPECTOR.Scheduler = Scheduler;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2733,7 +2708,6 @@ var INSPECTOR;
     INSPECTOR.Tab = Tab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2827,7 +2801,7 @@ var INSPECTOR;
                     node.active(false);
                 }
             }
-            item.getDiv().scrollIntoView();
+            //  item.getDiv().scrollIntoView();
             item.active(true);
         };
         /** Returns the treeitem corersponding to the given obj, null if not found */
@@ -2884,7 +2858,6 @@ var INSPECTOR;
     INSPECTOR.PropertyTab = PropertyTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2918,7 +2891,6 @@ var INSPECTOR;
     INSPECTOR.CameraTab = CameraTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2974,7 +2946,6 @@ var INSPECTOR;
     INSPECTOR.GUITab = GUITab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -3015,7 +2986,6 @@ var INSPECTOR;
     INSPECTOR.PhysicsTab = PhysicsTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -3053,7 +3023,6 @@ var INSPECTOR;
     INSPECTOR.SoundTab = SoundTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -3227,7 +3196,6 @@ var INSPECTOR;
     INSPECTOR.TextureTab = TextureTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -3261,7 +3229,6 @@ var INSPECTOR;
     INSPECTOR.LightTab = LightTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -3295,7 +3262,6 @@ var INSPECTOR;
     INSPECTOR.MaterialTab = MaterialTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 /// <reference path="../../../dist/preview release/babylon.d.ts"/>
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -3386,7 +3352,6 @@ var INSPECTOR;
     INSPECTOR.MeshTab = MeshTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -3573,7 +3538,6 @@ var INSPECTOR;
     INSPECTOR.SceneTab = SceneTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -3713,7 +3677,6 @@ var INSPECTOR;
     INSPECTOR.ConsoleTab = ConsoleTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4058,7 +4021,65 @@ var INSPECTOR;
     INSPECTOR.StatsTab = StatsTab;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
+/// <reference path="../../../dist/preview release/gltf2Interface/babylon.glTF2Interface.d.ts"/>
+/// <reference path="../../../dist/preview release/serializers/babylon.glTF2Serializer.d.ts"/>
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var INSPECTOR;
+(function (INSPECTOR) {
+    var GLTFTab = /** @class */ (function (_super) {
+        __extends(GLTFTab, _super);
+        function GLTFTab(tabbar, inspector) {
+            var _this = _super.call(this, tabbar, 'GLTF') || this;
+            _this._panel = INSPECTOR.Helpers.CreateDiv('tab-panel');
+            var actions = INSPECTOR.Helpers.CreateDiv('gltf-actions', _this._panel);
+            _this._addExport(inspector, actions);
+            return _this;
+        }
+        GLTFTab.prototype.dispose = function () {
+            // Nothing to dispose
+        };
+        GLTFTab.prototype._addExport = function (inspector, actions) {
+            var title = INSPECTOR.Helpers.CreateDiv('gltf-title', actions);
+            title.textContent = 'Export';
+            var name = INSPECTOR.Helpers.CreateInput('gltf-input', actions);
+            name.placeholder = "File name...";
+            var button = INSPECTOR.Helpers.CreateElement('button', 'gltf-button', actions);
+            button.innerText = 'Export GLB';
+            button.addEventListener('click', function () {
+                var data = BABYLON.GLTF2Export.GLB(inspector.scene, name.value || "scene", {
+                    shouldExportMesh: function (mesh) { return !GLTFTab._IsSkyBox(mesh); }
+                });
+                if (data) {
+                    data.downloadFiles();
+                }
+            });
+        };
+        GLTFTab._IsSkyBox = function (transformNode) {
+            if (transformNode instanceof BABYLON.Mesh) {
+                if (transformNode.material) {
+                    var material = transformNode.material;
+                    var reflectionTexture = material.reflectionTexture;
+                    if (reflectionTexture && reflectionTexture.coordinatesMode === BABYLON.Texture.SKYBOX_MODE) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        return GLTFTab;
+    }(INSPECTOR.Tab));
+    INSPECTOR.GLTFTab = GLTFTab;
+})(INSPECTOR || (INSPECTOR = {}));
+
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4094,6 +4115,9 @@ var INSPECTOR;
             _this._tabs.push(_this._meshTab);
             _this._tabs.push(new INSPECTOR.LightTab(_this, _this._inspector));
             _this._tabs.push(new INSPECTOR.MaterialTab(_this, _this._inspector));
+            if (BABYLON.GLTF2Export) {
+                _this._tabs.push(new INSPECTOR.GLTFTab(_this, _this._inspector));
+            }
             if (BABYLON.GUI) {
                 _this._tabs.push(new INSPECTOR.GUITab(_this, _this._inspector));
             }
@@ -4280,7 +4304,6 @@ var INSPECTOR;
     INSPECTOR.TabBar = TabBar;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var INSPECTOR;
 (function (INSPECTOR) {
     var AbstractTool = /** @class */ (function () {
@@ -4321,7 +4344,6 @@ var INSPECTOR;
     INSPECTOR.AbstractTool = AbstractTool;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4358,7 +4380,6 @@ var INSPECTOR;
     INSPECTOR.PauseScheduleTool = PauseScheduleTool;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4422,7 +4443,6 @@ var INSPECTOR;
     INSPECTOR.PickTool = PickTool;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4449,7 +4469,6 @@ var INSPECTOR;
     INSPECTOR.PopupTool = PopupTool;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4476,7 +4495,6 @@ var INSPECTOR;
     INSPECTOR.RefreshTool = RefreshTool;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4588,6 +4606,7 @@ var INSPECTOR;
                 this._initializeLabels();
                 this._advancedTexture._rootContainer.isVisible = true;
             }
+            // Or to hide them
             else {
                 this._advancedTexture._rootContainer.isVisible = false;
             }
@@ -4597,7 +4616,6 @@ var INSPECTOR;
     INSPECTOR.LabelTool = LabelTool;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4663,7 +4681,6 @@ var INSPECTOR;
     INSPECTOR.Toolbar = Toolbar;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4693,7 +4710,6 @@ var INSPECTOR;
     INSPECTOR.DisposeTool = DisposeTool;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4726,7 +4742,6 @@ var INSPECTOR;
     INSPECTOR.FullscreenTool = FullscreenTool;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4912,7 +4927,6 @@ var INSPECTOR;
     INSPECTOR.TreeItem = TreeItem;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var INSPECTOR;
 (function (INSPECTOR) {
     var AbstractTreeTool = /** @class */ (function () {
@@ -4945,7 +4959,6 @@ var INSPECTOR;
     INSPECTOR.AbstractTreeTool = AbstractTreeTool;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -4993,7 +5006,6 @@ var INSPECTOR;
     INSPECTOR.BoundingBox = BoundingBox;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -5049,7 +5061,6 @@ var INSPECTOR;
     INSPECTOR.CameraPOV = CameraPOV;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -5097,7 +5108,6 @@ var INSPECTOR;
     INSPECTOR.SoundInteractions = SoundInteractions;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -5151,7 +5161,6 @@ var INSPECTOR;
     INSPECTOR.Checkbox = Checkbox;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -5189,7 +5198,6 @@ var INSPECTOR;
     INSPECTOR.DebugArea = DebugArea;
 })(INSPECTOR || (INSPECTOR = {}));
 
-"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
