@@ -34,11 +34,11 @@ module BABYLON.GLTF2.Extensions {
         mimeType?: AudioMimeType;
     }
 
-    interface ILoaderClip extends IClip, IArrayItem {
+    interface ILoaderClip extends IClip, _IArrayItem {
         _objectURL?: Promise<string>;
     }
 
-    interface ILoaderEmitter extends IEmitter, IArrayItem {
+    interface ILoaderEmitter extends IEmitter, _IArrayItem {
         _babylonData?: { 
             sound?: WeightedSound;
             meshes: AbstractMesh[];
@@ -64,7 +64,7 @@ module BABYLON.GLTF2.Extensions {
         offset?: number;
     }
 
-    interface ILoaderAnimationEvent extends IAnimationEvent, IArrayItem {
+    interface ILoaderAnimationEvent extends IAnimationEvent, _IArrayItem {
     }
 
     interface ILoaderAnimationEvents {
@@ -273,7 +273,7 @@ module BABYLON.GLTF2.Extensions {
             return emitter._babylonData.loaded;
         }
 
-        protected _loadSceneAsync(context: string, scene: ILoaderScene): Nullable<Promise<void>> { 
+        protected _loadSceneAsync(context: string, scene: _ILoaderScene): Nullable<Promise<void>> { 
             return this._loadExtensionAsync<IEmittersReference>(context, scene, (extensionContext, extension) => {
                 return this._loader._loadSceneAsync(extensionContext, scene).then(() => {
 
@@ -292,7 +292,7 @@ module BABYLON.GLTF2.Extensions {
             });
         }
 
-        protected _loadNodeAsync(context: string, node: ILoaderNode): Nullable<Promise<void>> { 
+        protected _loadNodeAsync(context: string, node: _ILoaderNode): Nullable<Promise<void>> { 
             return this._loadExtensionAsync<IEmittersReference>(context, node, (extensionContext, extension) => {
                 return this._loader._loadNodeAsync(extensionContext, node).then(() => {
                     const promises = new Array<Promise<void>>();
@@ -306,7 +306,7 @@ module BABYLON.GLTF2.Extensions {
             });
         }
 
-        protected _loadAnimationAsync(context: string, animation: ILoaderAnimation): Nullable<Promise<void>> { 
+        protected _loadAnimationAsync(context: string, animation: _ILoaderAnimation): Nullable<Promise<void>> { 
             return this._loadExtensionAsync<ILoaderAnimationEvents>(context, animation, (extensionContext, extension) => {
                 return this._loader._loadAnimationAsync(extensionContext, animation).then(() => {
                     const promises = new Array<Promise<void>>();
@@ -323,7 +323,7 @@ module BABYLON.GLTF2.Extensions {
             });
         }
 
-        private _loadAnimationEventAsync(context: string, animationContext: string, animation: ILoaderAnimation, event: ILoaderAnimationEvent, babylonAnimationGroup: AnimationGroup): Promise<void> {
+        private _loadAnimationEventAsync(context: string, animationContext: string, animation: _ILoaderAnimation, event: ILoaderAnimationEvent, babylonAnimationGroup: AnimationGroup): Promise<void> {
             if (babylonAnimationGroup.targetedAnimations.length == 0) {
                 return Promise.resolve();
             }

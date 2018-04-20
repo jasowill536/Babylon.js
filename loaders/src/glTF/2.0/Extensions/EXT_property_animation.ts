@@ -5,12 +5,12 @@ module BABYLON.GLTF2.Extensions {
 
     const NAME = "EXT_property_animation";
 
-    interface IPropertyAnimationChannel {
+    interface _IPropertyAnimationChannel {
         target: string;
         sampler: number;
     }
 
-    interface ILoaderPropertyAnimationChannel extends IPropertyAnimationChannel, IArrayItem {
+    interface ILoaderPropertyAnimationChannel extends _IPropertyAnimationChannel, _IArrayItem {
     }
 
     interface ILoaderPropertyAnimationChannels {
@@ -28,7 +28,7 @@ module BABYLON.GLTF2.Extensions {
             KHR_lights: {
                 lights: {
                     _isIndexed: true,
-                    _getTarget: function (gltf: ILoaderGLTF, index: number) {
+                    _getTarget: function (gltf: _ILoaderGLTF, index: number) {
                         for (const node of gltf.nodes!) {
                             if (node.extensions && node.extensions!.KHR_lights && node.extensions.KHR_LIGHTS!.light == index) {
                                 let lights = node!._babylonMesh!.getChildren((childNode: Node) => { return childNode instanceof Light });
@@ -60,7 +60,7 @@ module BABYLON.GLTF2.Extensions {
             MSFT_audio_emitter: {
                 emitters: {
                     _isIndexed: true,
-                    _getTarget: function (gltf: ILoaderGLTF, index: number) {
+                    _getTarget: function (gltf: _ILoaderGLTF, index: number) {
                         if (gltf.extensions && 
                             gltf.extensions.MSFT_audio_emitter &&
                              gltf.extensions.MSFT_audio_emitter.emitters &&
@@ -91,7 +91,7 @@ module BABYLON.GLTF2.Extensions {
         },
         materials: {
             _isIndexed: true,
-            _getTarget: function (gltf: ILoaderGLTF, index: number) {
+            _getTarget: function (gltf: _ILoaderGLTF, index: number) {
                 return GLTFLoader._GetProperty(`/materials`, gltf.materials, index)._babylonData![Material.TriangleFillMode].material;
             },
             pbrMetallicRoughness: {
@@ -118,7 +118,7 @@ module BABYLON.GLTF2.Extensions {
     export class EXT_property_animation extends GLTFLoaderExtension {
         public readonly name = NAME;
 
-        protected _loadAnimationAsync(context: string, animation: ILoaderAnimation): Nullable<Promise<void>> { 
+        protected _loadAnimationAsync(context: string, animation: _ILoaderAnimation): Nullable<Promise<void>> { 
             return this._loadExtensionAsync<ILoaderPropertyAnimationChannels>(context, animation, (extensionContext, extension) => {
                 return this._loader._loadAnimationAsync(extensionContext, animation).then(() => {
                     const promises = new Array<Promise<void>>();
@@ -135,7 +135,7 @@ module BABYLON.GLTF2.Extensions {
             });
         }
 
-        private _loadAnimationChannelAsync(context: string, animationContext: string, animation: ILoaderAnimation, channel: IPropertyAnimationChannel, babylonAnimationGroup: AnimationGroup): Promise<void> {
+        private _loadAnimationChannelAsync(context: string, animationContext: string, animation: _ILoaderAnimation, channel: _IPropertyAnimationChannel, babylonAnimationGroup: AnimationGroup): Promise<void> {
             const sampler = GLTFLoader._GetProperty(`${context}/sampler`, animation.samplers, channel.sampler);
             return this._loader._loadAnimationSamplerAsync(`${animationContext}/samplers/${channel.sampler}`, sampler).then(data => {
                 const target = this._getAnimationObject(context, animationContext, channel.target);
