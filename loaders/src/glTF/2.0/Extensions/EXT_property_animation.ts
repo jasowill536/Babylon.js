@@ -18,41 +18,106 @@ module BABYLON.GLTF2.Extensions {
     }
 
     interface _ILoaderPropertyAnimationTarget {
-        targetPath: string;
+        path: string;
+        transformKeys: Function;
         animationType: number;
-        object: any;
     }
 
-    const PATH_PROPERTIES: any = {
+    interface _ILoaderPropertyAnimationTargets {
+        targets: _ILoaderPropertyAnimationTarget[];
+        inputAnimationType: number;
+        objects: any[];
+    }
+
+    const Color4ToColor3KeyTransform = (inputKeys: Array<IAnimationKey>): Array<IAnimationKey> => {
+        const outputKeys: Array<IAnimationKey> = [];
+        for (const key of inputKeys) {
+            outputKeys.push({
+                interpolation: key.interpolation,
+                frame: key.frame,
+                value: new Color3(key.value.r, key.value.g, key.value.b),
+                inTangent: key.inTangent ? new Color3(key.inTangent.r, key.inTangent.g, key.inTangent.b) : undefined,
+                outTangent: key.outTangent ? new Color3(key.outTangent.r, key.outTangent.g, key.outTangent.b) : undefined,
+            });
+        }
+        return outputKeys;
+    }
+
+    const Color4ToAlphaKeyTransform = (inputKeys: Array<IAnimationKey>): Array<IAnimationKey> => {
+        const outputKeys: Array<IAnimationKey> = [];
+        for (const key of inputKeys) {
+            outputKeys.push({
+                interpolation: key.interpolation,
+                frame: key.frame,
+                value: key.value.a,
+                inTangent: key.inTangent ? key.inTangent.a : undefined,
+                outTangent: key.outTangent ? key.outTangent.a : undefined,
+            });
+        }
+        return outputKeys;
+    }
+
+    const NegateFloatKeyTransform = (inputKeys: Array<IAnimationKey>): Array<IAnimationKey> => {
+        const outputKeys: Array<IAnimationKey> = [];
+        for (const key of inputKeys) {
+            outputKeys.push({
+                interpolation: key.interpolation,
+                frame: key.frame,
+                value: -key.value,
+                inTangent: key.inTangent ? -key.inTangent : undefined,
+                outTangent: key.outTangent ? -key.outTangent : undefined,
+            });
+        }
+        return outputKeys;
+    }
+
+    const IdempotentKeyTransform = (inputKeys: Array<IAnimationKey>): Array<IAnimationKey> => {
+        return inputKeys;
+    }
+
+    const _PATH_PROPERTIES: any = {
         extensions: {
             KHR_lights: {
                 lights: {
                     _isIndexed: true,
-                    _getTarget: function (gltf: _ILoaderGLTF, index: number) {
-                        for (const node of gltf.nodes!) {
-                            if (node.extensions && node.extensions!.KHR_lights && node.extensions.KHR_LIGHTS!.light == index) {
-                                let lights = node!._babylonMesh!.getChildren((childNode: Node) => { return childNode instanceof Light });
-                                if (lights.length > 0) {
-                                    return lights[0];
-                                }
+                    _getTarget: (loader: GLTFLoader, gltfContext: any): any[] | undefined => {
+                        if (gltfContext) {
+                            if (gltfContext.type === "ambient") {
+                                return [loader._babylonScene];
                             }
+
+                            return gltfContext._babylonData;
                         }
                         return undefined;
                     },
                     color: {
-                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_COLOR3,
-                        _targetPath: 'diffuse'
+                        _inputAnimationType: Animation.ANIMATIONTYPE_COLOR3,
+                        _getContextualTargets: (targetObjects: any): _ILoaderPropertyAnimationTarget[] => {
+                            if (targetObjects.length == 1 && targetObjects[0] instanceof Scene) {
+                                return [{
+                                    transformKeys: IdempotentKeyTransform,
+                                    animationType: Animation.ANIMATIONTYPE_COLOR3,
+                                    path: 'ambientColor',
+                                }];
+                            } else {
+                                return [{
+                                    transformKeys: IdempotentKeyTransform,
+                                    animationType: Animation.ANIMATIONTYPE_COLOR3,
+                                    path: 'diffuse',
+                                }];
+                            }
+                        }
                     },
                     intensity: {
-                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
+                        _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
                         _targetPath: 'intensity'
                     },
                     // innerConeAngle: {
-                    //     _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
+                    //     _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
                     //     _targetPath: 'innerConeAngle'
                     // },
                     outerConeAngle: {
-                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
+                        _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
                         _targetPath: 'angle'
                     }
                 }
@@ -60,29 +125,26 @@ module BABYLON.GLTF2.Extensions {
             MSFT_audio_emitter: {
                 emitters: {
                     _isIndexed: true,
-                    _getTarget: function (gltf: _ILoaderGLTF, index: number) {
-                        if (gltf.extensions && 
-                            gltf.extensions.MSFT_audio_emitter &&
-                             gltf.extensions.MSFT_audio_emitter.emitters &&
-                             gltf.extensions.MSFT_audio_emitter.emitters.length > index) {
-                            return gltf.extensions.MSFT_audio_emitter.emitters[index]._babylonData.sound;
+                    _getTarget: (loader: GLTFLoader, gltfContext: any): any[] | undefined => {
+                        if (gltfContext && gltfContext._babylonData) {
+                            return [gltfContext._babylonData.sound];
                         }
                         return undefined;
                     },
                     volume: {
-                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
+                        _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
                         _targetPath: 'volume'
                     },
                     direction: {
-                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_VECTOR3,
+                        _inputAnimationType: Animation.ANIMATIONTYPE_VECTOR3,
                         _targetPath: 'direction'
                     },
                     innerAngle: {
-                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
+                        _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
                         _targetPath: 'directionalConeInnerAngle'
                     },
                     outerAngle: {
-                        _typedKeyframeTrack: Animation.ANIMATIONTYPE_FLOAT,
+                        _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
                         _targetPath: 'directionalConeOuterAngle'
                     },
                 }
@@ -91,26 +153,165 @@ module BABYLON.GLTF2.Extensions {
         },
         materials: {
             _isIndexed: true,
-            _getTarget: function (gltf: _ILoaderGLTF, index: number) {
-                return GLTFLoader._GetProperty(`/materials`, gltf.materials, index)._babylonData![Material.TriangleFillMode].material;
+            _getTarget: (loader: GLTFLoader, gltfContext: any): any[] | undefined => {
+                if (gltfContext && gltfContext._babylonData) {
+                    const result = [];
+                    for (const drawMode in gltfContext._babylonData) {
+                        result.push(gltfContext._babylonData[drawMode].material);
+                    }
+                    return result;
+                }
+                return undefined;
             },
             pbrMetallicRoughness: {
                 baseColorFactor: {
-                    _animationType: Animation.ANIMATIONTYPE_COLOR4,
-                    _targetPath: 'albedoColor'
+                    _inputAnimationType: Animation.ANIMATIONTYPE_COLOR4,
+                    _targets: [{ 
+                        transformKeys: Color4ToColor3KeyTransform,
+                        animationType: Animation.ANIMATIONTYPE_COLOR3,
+                        path: 'albedoColor',
+                    }, {
+                        transformKeys: Color4ToAlphaKeyTransform,
+                        animationType: Animation.ANIMATIONTYPE_FLOAT,
+                        path: 'alpha',
+                    }]
                 },
                 metallicFactor: {
-                    _animationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
                     _targetPath: 'metallic'
                 },
                 roughnessFactor: {
-                    _animationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
                     _targetPath: 'roughness'
                 }
             },
+            alphaCutoff: {
+                _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                _targetPath: 'alphaCutOff'
+            },
             emissiveFactor: {
-                _animationType: Animation.ANIMATIONTYPE_COLOR3,
+                _inputAnimationType: Animation.ANIMATIONTYPE_COLOR3,
                 _targetPath: 'emissive'
+            },
+            normalTexture: {
+                scale: {
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _targetPath: 'bumpTexture.level'
+                }
+            },
+            occlusionTexture: {
+                strength: {
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _targetPath: 'ambientTextureStrength'
+                }
+            },
+            extensions: {
+                KHR_materials_pbrSpecularGlossiness: {
+                    diffuseFactor: {
+                        _inputAnimationType: Animation.ANIMATIONTYPE_COLOR4,
+                        _targets: [{ 
+                            transformKeys: Color4ToColor3KeyTransform,
+                            animationType: Animation.ANIMATIONTYPE_COLOR3,
+                            path: 'albedoColor',
+                        }, {
+                            transformKeys: Color4ToAlphaKeyTransform,
+                            animationType: Animation.ANIMATIONTYPE_FLOAT,
+                            path: 'alpha',
+                        }]
+                    },
+                    specularFactor: {
+                        _inputAnimationType: Animation.ANIMATIONTYPE_COLOR3,
+                        _targetPath: 'reflectivityColor'
+                    },
+                    glossinessFactor: {
+                        _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                        _targetPath: 'microSurface'
+                    }
+                }
+            }
+        },
+        nodes: {
+            _isIndexed: true,
+            _getTarget: (loader: GLTFLoader, gltfContext: any): any[] | undefined => {
+                if (gltfContext) {
+                    return gltfContext._babylonAnimationTargets;
+                }
+                return undefined;
+            },
+            translation: {
+                _inputAnimationType: Animation.ANIMATIONTYPE_VECTOR3,
+                _targetPath: 'position'
+            },
+            rotation: {
+                _inputAnimationType: Animation.ANIMATIONTYPE_QUATERNION,
+                _targetPath: 'rotationQuaternion'
+            },
+            scale: {
+                _inputAnimationType: Animation.ANIMATIONTYPE_VECTOR3,
+                _targetPath: 'scaling'
+            },
+        },
+        cameras: {
+            _isIndexed: true,
+            _getTarget: (loader: GLTFLoader, gltfContext: any): any[] | undefined => {
+                if (gltfContext) {
+                    return [gltfContext._babylonData];
+                }
+                return undefined;
+            },
+            orthographic: {
+                xmag: {
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _targets: [{ 
+                        transformKeys: NegateFloatKeyTransform,
+                        animationType: Animation.ANIMATIONTYPE_FLOAT,
+                        path: 'orthoLeft',
+                    },
+                    { 
+                        transformKeys: IdempotentKeyTransform,
+                        animationType: Animation.ANIMATIONTYPE_FLOAT,
+                        path: 'orthoRight',
+                    }]
+                },
+                ymag: {
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _targets: [{ 
+                        transformKeys: NegateFloatKeyTransform,
+                        animationType: Animation.ANIMATIONTYPE_FLOAT,
+                        path: 'orthoBottom',
+                    },
+                    { 
+                        transformKeys: IdempotentKeyTransform,
+                        animationType: Animation.ANIMATIONTYPE_FLOAT,
+                        path: 'orthoTop',
+                    }]
+                },
+                zfar: {
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _targetPath: 'maxZ'
+                },
+                znear: {
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _targetPath: 'minZ'
+                }
+            },
+            perspective: {
+                // aspectRatio: {
+                //     _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                //     _targetPath: 'aspectRatio'
+                // },
+                yfov: {
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _targetPath: 'fov'
+                },
+                zfar: {
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _targetPath: 'maxZ'
+                },
+                znear: {
+                    _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+                    _targetPath: 'minZ'
+                },
             }
         }
     }
@@ -139,11 +340,11 @@ module BABYLON.GLTF2.Extensions {
         private _loadAnimationChannelAsync(context: string, animationContext: string, animation: _ILoaderAnimation, channel: _IPropertyAnimationChannel, babylonAnimationGroup: AnimationGroup): Promise<void> {
             const sampler = GLTFLoader._GetProperty(`${context}/sampler`, animation.samplers, channel.sampler);
             return this._loader._loadAnimationSamplerAsync(`${animationContext}/samplers/${channel.sampler}`, sampler).then(data => {
-                const target = this._getAnimationObject(context, animationContext, channel.target);
+                const targets = this._getAnimationObjects(context, animationContext, channel.target);
 
                 let outputBufferOffset = 0;
-                let getNextOutputValue: () => number | Vector2 | Vector3 | Quaternion | Color3;
-                switch (target.animationType) {
+                let getNextOutputValue: () => number | Vector2 | Vector3 | Quaternion | Color3 | Color4;
+                switch (targets.inputAnimationType) {
                     case Animation.ANIMATIONTYPE_VECTOR2: {
                         getNextOutputValue = () => {
                             const value = Vector2.FromArray(data.output, outputBufferOffset);
@@ -178,7 +379,7 @@ module BABYLON.GLTF2.Extensions {
                     }
                     case Animation.ANIMATIONTYPE_COLOR4: {
                         getNextOutputValue = () => {
-                            const value = Color3.FromArray(data.output, outputBufferOffset);
+                            const value = Color4.FromArray(data.output, outputBufferOffset);
                             outputBufferOffset += 4;
                             return value;
                         };
@@ -225,49 +426,34 @@ module BABYLON.GLTF2.Extensions {
                     keys[frameIndex] = getNextKey!(frameIndex);
                 }
 
-                const animationName = `${babylonAnimationGroup.name}_${NAME}_channel${babylonAnimationGroup.targetedAnimations.length}`;
-                const babylonAnimation = new Animation(animationName, target.targetPath, 1, target.animationType == Animation.ANIMATIONTYPE_COLOR4 ? Animation.ANIMATIONTYPE_COLOR3 : target.animationType);
-                babylonAnimation.setKeys(keys);
-
-                if (target.object != undefined) {
-                    babylonAnimationGroup.addTargetedAnimation(babylonAnimation, target.object);
+                if (targets.objects == undefined) {
+                    return;
                 }
 
-                if (target.animationType == Animation.ANIMATIONTYPE_COLOR4) {
-                    outputBufferOffset = 3;
-                    getNextOutputValue = () => {
-                        const value = data.output[outputBufferOffset];
-                        outputBufferOffset += 4;
-                        return value;
-                    };
-                    const alphaKeys = new Array(data.input.length);
-                    for (let frameIndex = 0; frameIndex < data.input.length; frameIndex++) {
-                        alphaKeys[frameIndex] = getNextKey!(frameIndex);
-                    }
+                for (const target of targets.targets) {
+                    const animationName = `${babylonAnimationGroup.name}_${NAME}_channel${babylonAnimationGroup.targetedAnimations.length}_${target.path}`;
+                    const babylonAnimation = new Animation(animationName, target.path, 1, target.animationType);
+                    babylonAnimation.setKeys(target.transformKeys(keys));
 
-                    const alphaAnimationName = `${babylonAnimationGroup.name}_${NAME}_channel${babylonAnimationGroup.targetedAnimations.length}_alpha`;
-                    const alphaBabylonAnimation = new Animation(alphaAnimationName, 'alpha', 1, Animation.ANIMATIONTYPE_FLOAT);
-                    alphaBabylonAnimation.setKeys(alphaKeys);
-    
-                    if (target.object != undefined) {
-                        babylonAnimationGroup.addTargetedAnimation(alphaBabylonAnimation, target.object);
+                    for (const targetObject of targets.objects) {
+                        babylonAnimationGroup.addTargetedAnimation(babylonAnimation.clone(), targetObject);
                     }
                 }
             });
         }
 
-        private _getAnimationObject(context: string, animationContext: string, target: string): _ILoaderPropertyAnimationTarget {
-            let result: _ILoaderPropertyAnimationTarget = {
-                targetPath: '',
-                animationType: 0,
-                object: null
+        private _getAnimationObjects(context: string, animationContext: string, target: string): _ILoaderPropertyAnimationTargets {
+            const result: _ILoaderPropertyAnimationTargets = {
+                targets: [],
+                inputAnimationType: 0,
+                objects: []
             };
 
-            let pathPartNode = PATH_PROPERTIES;
-            let targetPaths: string[] = [];
+            let pathPartNode = _PATH_PROPERTIES;
             const pathParts = target.split( '/' );
+            let gltfContext: any = this._loader._gltf;
             for (let pathIndex = 0, pathPartsLength = pathParts.length; pathIndex < pathPartsLength; pathIndex ++) {
-                let pathPart = pathParts[ pathIndex ];
+                let pathPart = pathParts[pathIndex];
                 if (pathPart === '') {
                     continue;
                 }
@@ -278,29 +464,46 @@ module BABYLON.GLTF2.Extensions {
                     throw new Error(`${context}: Invalid ${NAME} target path (${target})`);
                 }
 
+                if (gltfContext != undefined) {
+                    gltfContext = gltfContext[pathPart];
+                }
+
                 if (pathPartNode._isIndexed) {
                     pathPart = pathParts[++pathIndex];
+                    if (gltfContext != undefined) {
+                        gltfContext = gltfContext[pathPart];
+                    }
 
                     if (pathPartNode._getTarget !== undefined) {
 
-                        result.object = pathPartNode._getTarget( this._loader._gltf, pathPart );
-                        if (result.object == undefined) {
+                        result.objects = pathPartNode._getTarget(this._loader, gltfContext);
+                        if (result.objects == undefined) {
                             throw new Error(`${context}: Invalid ${NAME} target path (${target})`);
                         }
                     }
                 }
 
                 if (pathPartNode._targetPath !== undefined) {
-                    targetPaths.push( pathPartNode._targetPath );
-                    //result.object = result.object[ pathPartNode._targetPath ];
+                    result.targets.push({
+                        path: pathPartNode._targetPath,
+                        transformKeys: IdempotentKeyTransform,
+                        animationType: pathPartNode._inputAnimationType,
+                    });
                 }
 
-                if (pathPartNode._animationType !== undefined) {
-                    result.animationType = pathPartNode._animationType;
+                if (pathPartNode._getContextualTargets !== undefined) {
+                    result.targets = result.targets.concat(pathPartNode._getContextualTargets(result.objects));
+                }
+
+                if (pathPartNode._targets !== undefined) {
+                    result.targets = result.targets.concat(pathPartNode._targets);
+                }
+
+                if (pathPartNode._inputAnimationType !== undefined) {
+                    result.inputAnimationType = pathPartNode._inputAnimationType;
                 }
             }
 
-            result.targetPath = targetPaths.join('.');
             return result;
         }
     }

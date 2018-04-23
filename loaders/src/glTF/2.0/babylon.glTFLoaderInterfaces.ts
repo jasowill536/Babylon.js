@@ -45,6 +45,7 @@ module BABYLON.GLTF2 {
 
     /** @hidden */
     export interface _ILoaderCamera extends ICamera, _IArrayItem {
+        _babylonData?: FreeCamera;
     }
 
     /** @hidden */

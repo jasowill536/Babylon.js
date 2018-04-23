@@ -897,6 +897,7 @@ module BABYLON.GLTF2 {
                 }
             }
 
+            camera._babylonData = babylonCamera;
             this.onCameraLoadedObservable.notifyObservers(babylonCamera);
         }
 

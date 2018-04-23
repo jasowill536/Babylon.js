@@ -10,23 +10,27 @@ module BABYLON.GLTF2.Extensions {
         SPOT = "spot"
     }
 
-    interface ILightReference {
+    interface _ILightReference {
         light: number;
     }
 
-    interface ILight {
+    interface _ILight {
         type: LightType;
         color?: number[];
         intensity?: number;
     }
 
-    interface ISpotLight extends ILight {
+    interface _ILoaderLight extends _IArrayItem, _ILight {
+        _babylonData?: Light[];
+    }
+
+    interface _ISpotLight extends _ILight {
         innerConeAngle?: number;
         outerConeAngle?: number;
     }
 
-    interface ILights {
-        lights: ILight[];
+    interface _ILoaderLights {
+        lights: _ILoaderLight[];
     }
 
     /**
@@ -36,7 +40,7 @@ module BABYLON.GLTF2.Extensions {
         public readonly name = NAME;
 
         protected _loadSceneAsync(context: string, scene: _ILoaderScene): Nullable<Promise<void>> { 
-            return this._loadExtensionAsync<ILightReference>(context, scene, (extensionContext, extension) => {
+            return this._loadExtensionAsync<_ILightReference>(context, scene, (extensionContext, extension) => {
                 const promise = this._loader._loadSceneAsync(extensionContext, scene);
 
                 const light = GLTFLoader._GetProperty(extensionContext, this._lights, extension.light);
@@ -51,12 +55,13 @@ module BABYLON.GLTF2.Extensions {
         }
 
         protected _loadNodeAsync(context: string, node: _ILoaderNode): Nullable<Promise<void>> { 
-            return this._loadExtensionAsync<ILightReference>(context, node, (extensionContext, extension) => {
+            return this._loadExtensionAsync<_ILightReference>(context, node, (extensionContext, extension) => {
                 const promise = this._loader._loadNodeAsync(extensionContext, node);
 
                 let babylonLight: Light;
 
                 const light = GLTFLoader._GetProperty(extensionContext, this._lights, extension.light);
+                light._babylonData = light._babylonData || [];
                 const name = node._babylonMesh!.name;
                 switch (light.type) {
                     case LightType.AMBIENT: {
@@ -71,7 +76,7 @@ module BABYLON.GLTF2.Extensions {
                         break;
                     }
                     case LightType.SPOT: {
-                        const spotLight = light as ISpotLight;
+                        const spotLight = light as _ISpotLight;
                         // TODO: support inner and outer cone angles
                         //const innerConeAngle = spotLight.innerConeAngle || 0;
                         const outerConeAngle = spotLight.outerConeAngle || Math.PI / 4;
@@ -86,18 +91,20 @@ module BABYLON.GLTF2.Extensions {
                 babylonLight.diffuse = light.color ? Color3.FromArray(light.color) : Color3.White();
                 babylonLight.intensity = light.intensity == undefined ? 1 : light.intensity;
                 babylonLight.parent = node._babylonMesh!;
+                light._babylonData.push(babylonLight);
 
                 return promise;
             });
         }
 
-        private get _lights(): Array<ILight> {
+        private get _lights(): Array<_ILoaderLight> {
             const extensions = this._loader._gltf.extensions;
             if (!extensions || !extensions[this.name]) {
                 throw new Error(`#/extensions: '${this.name}' not found`);
             }
-
-            const extension = extensions[this.name] as ILights;
+            
+            const extension = extensions[this.name] as _ILoaderLights;
+            _ArrayItem.Assign(extension.lights);
             return extension.lights;
         }
     }
