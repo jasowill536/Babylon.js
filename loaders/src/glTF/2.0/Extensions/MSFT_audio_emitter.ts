@@ -4,6 +4,7 @@ module BABYLON.GLTF2.Extensions {
     // https://github.com/najadojo/glTF/tree/MSFT_audio_emitter/extensions/2.0/Vendor/MSFT_audio_emitter
 
     const NAME = "MSFT_audio_emitter";
+    const TwoPI = Math.PI * 2;
 
     interface _IClipReference {
         clip: number;
@@ -74,8 +75,8 @@ module BABYLON.GLTF2.Extensions {
     export class WeightedSound {
         public loop: boolean = false;
         private _localDirection: Vector3 = new Vector3(1, 0, 0);
-        private _coneInnerAngle: number = 360;
-        private _coneOuterAngle: number = 360;
+        private _coneInnerAngle: number = TwoPI;
+        private _coneOuterAngle: number = TwoPI;
         private _volume: number = 1;
         public isPlaying: boolean = false;
         public isPaused: boolean = false;
@@ -109,8 +110,9 @@ module BABYLON.GLTF2.Extensions {
                 }
 
                 this._coneInnerAngle = value;
+                const degrees = Tools.ToDegrees(value);
                 for (let sound of this._sounds) {
-                    sound.directionalConeInnerAngle = value;
+                    sound.directionalConeInnerAngle = degrees;
                 }
             }
         }
@@ -127,8 +129,9 @@ module BABYLON.GLTF2.Extensions {
                 }
 
                 this._coneOuterAngle = value;
+                const degrees = Tools.ToDegrees(value)
                 for (let sound of this._sounds) {
-                    sound.directionalConeOuterAngle = value;
+                    sound.directionalConeOuterAngle = degrees;
                 }
             }
         }
@@ -230,7 +233,7 @@ module BABYLON.GLTF2.Extensions {
                 const options = {
                     loop: false,
                     autoplay: false,
-                    volume: emitter.volume || 1,
+                    volume: emitter.volume == undefined ? 1 : emitter.volume,
                 };
                 let direction = emitter.direction;
                 let innerAngle = emitter.innerAngle;
@@ -243,9 +246,9 @@ module BABYLON.GLTF2.Extensions {
                         const sound = emitter._babylonSounds[i] = new Sound(name, objectURL, this._loader._babylonScene, null, options);
                         if (babylonMesh) {
                             sound.attachToMesh(babylonMesh);
-                            if (direction || innerAngle || outerAngle) {
+                            if (direction || innerAngle != undefined || outerAngle != undefined) {
                                 sound.setLocalDirectionToMesh(Vector3.FromArray(direction || [1, 0, 0]));
-                                sound.setDirectionalCone(innerAngle || 360, outerAngle || 360, 0);
+                                sound.setDirectionalCone(Tools.ToDegrees(innerAngle == undefined ? TwoPI : innerAngle), Tools.ToDegrees(outerAngle == undefined ? TwoPI : outerAngle), 0);
                             }
                         }
                         return Promise.resolve();
@@ -254,12 +257,12 @@ module BABYLON.GLTF2.Extensions {
 
                 const promise = Promise.all(clipPromises).then(() => {
                     let weights = emitter.clips.map(clip => { return clip.weight || 1; });
-                    let sound = new WeightedSound(emitter.loop || false, emitter._babylonSounds, weights);
-                    if (direction) sound.direction = Vector3.FromArray(direction);
-                    if (innerAngle) sound.directionalConeInnerAngle = innerAngle;
-                    if (outerAngle) sound.directionalConeOuterAngle = outerAngle;
-                    if (emitter.volume) sound.volume = emitter.volume;
-                    emitter._babylonData!.sound = sound;
+                    let weightedSound = new WeightedSound(emitter.loop || false, emitter._babylonSounds, weights);
+                    if (direction) weightedSound.direction = Vector3.FromArray(direction);
+                    if (innerAngle) weightedSound.directionalConeInnerAngle = innerAngle;
+                    if (outerAngle) weightedSound.directionalConeOuterAngle = outerAngle;
+                    if (emitter.volume) weightedSound.volume = emitter.volume;
+                    emitter._babylonData!.sound = weightedSound;
                 });
 
                 emitter._babylonData = {
@@ -282,7 +285,7 @@ module BABYLON.GLTF2.Extensions {
                     _ArrayItem.Assign(this._emitters);
                     for (const emitterIndex of extension.emitters) {
                         const emitter = GLTFLoader._GetProperty(extensionContext, this._emitters, emitterIndex);
-                        if (emitter.direction || emitter.innerAngle || emitter.outerAngle) {
+                        if (emitter.direction || emitter.innerAngle != undefined || emitter.outerAngle != undefined) {
                             throw new Error(`${extensionContext}: Direction properties are not allowed on emitters attached to a scene`);
                         }
 
