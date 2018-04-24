@@ -339,10 +339,12 @@ module BABYLON.GLTF2.Extensions {
             if (sound) {
                 const action = event.action;
                 const offset = event.offset;
+                const time = event.time;
 
-                var babylonAnimationEvent = new AnimationEvent(event.time, () => {
+                var babylonAnimationEvent = new AnimationEvent(time, (currentFrame: number) => {
                     if (action == _AnimationEventAction.play) {
-                        sound.play(offset);
+                        const frameOffset = offset == -1 ? offset : ((offset == undefined ? 0 : offset) + (currentFrame - time));
+                        sound.play(frameOffset);
                     } else if (action == _AnimationEventAction.stop) {
                         sound.stop(offset);
                     }

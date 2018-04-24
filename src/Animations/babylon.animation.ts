@@ -46,7 +46,7 @@
             /** The frame for which the event is triggered **/
             public frame: number,
             /** The event to perform when triggered **/
-            public action: () => void , 
+            public action: (currentFrame: number) => void , 
             /** Specifies if the event should be triggered only once**/
             public onlyOnce?: boolean ) {
         }

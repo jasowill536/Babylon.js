@@ -538,7 +538,7 @@
                             index--;
                         }
                         event.isDone = true;
-                        event.action();
+                        event.action(currentFrame);
                     } // Don't do anything if the event has already be done.
                 } else if (events[index].isDone && !events[index].onlyOnce) {
                     // reset event, the animation is looping
