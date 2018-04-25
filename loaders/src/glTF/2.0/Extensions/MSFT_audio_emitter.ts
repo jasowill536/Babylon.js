@@ -338,23 +338,25 @@ module BABYLON.GLTF2.Extensions {
             const babylonAnimation = babylonAnimationGroup.targetedAnimations[0];
             const emitterIndex = event.emitter;
             const emitter = GLTFLoader._GetProperty(context, this._emitters, emitterIndex);
-            const sound = emitter._babylonData!.sound;
-            if (sound) {
-                const action = event.action;
-                const offset = event.offset;
-                const time = event.time;
-
-                var babylonAnimationEvent = new AnimationEvent(time, (currentFrame: number) => {
-                    if (action == _AnimationEventAction.play) {
-                        const frameOffset = offset == -1 ? offset : ((offset == undefined ? 0 : offset) + (currentFrame - time));
-                        sound.play(frameOffset);
-                    } else if (action == _AnimationEventAction.stop) {
-                        sound.stop(offset);
-                    }
-                });
-                babylonAnimation.animation.addEvent(babylonAnimationEvent);
-            }
-            return Promise.resolve();
+            return emitter._babylonData!.loaded.then(()=> {
+                const sound = emitter._babylonData!.sound;
+                if (sound) {
+                    const action = event.action;
+                    const offset = event.offset;
+                    const time = event.time;
+    
+                    var babylonAnimationEvent = new AnimationEvent(time, (currentFrame: number) => {
+                        if (action == _AnimationEventAction.play) {
+                            const frameOffset = offset == -1 ? offset : ((offset == undefined ? 0 : offset) + (currentFrame - time));
+                            sound.play(frameOffset);
+                        } else if (action == _AnimationEventAction.stop) {
+                            sound.stop(offset);
+                        }
+                    });
+                    babylonAnimation.animation.addEvent(babylonAnimationEvent);
+                }
+                return Promise.resolve();
+            });
         }
 
         private get _extension(): _IMSFTAudioEmitter {
