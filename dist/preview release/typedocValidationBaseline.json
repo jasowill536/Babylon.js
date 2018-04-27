@@ -1,7 +1,7 @@
 {
-  "errors": 4330,
+  "errors": 4320,
   "babylon.typedoc.json": {
-    "errors": 4330,
+    "errors": 4320,
     "Animatable": {
       "Class": {
         "Comments": {
@@ -6929,29 +6929,6 @@
                 "MissingText": true
               }
             }
-          }
-        },
-        "generateBabylonHDR": {
-          "Naming": {
-            "NotPascalCase": true
-          },
-          "Comments": {
-            "UselessReturn": true
-          },
-          "Parameter": {
-            "callback": {
-              "Comments": {
-                "MissingText": true
-              }
-            }
-          }
-        },
-        "generateBabylonHDROnDisk": {
-          "Naming": {
-            "NotPascalCase": true
-          },
-          "Comments": {
-            "UselessReturn": true
           }
         }
       }
@@ -17919,35 +17896,6 @@
         "LuminanceSteps": {
           "Comments": {
             "MissingText": true
-          }
-        }
-      },
-      "Method": {
-        "serialize": {
-          "Comments": {
-            "MissingText": true
-          }
-        },
-        "Parse": {
-          "Comments": {
-            "MissingReturn": true
-          },
-          "Parameter": {
-            "source": {
-              "Comments": {
-                "MissingText": true
-              }
-            },
-            "scene": {
-              "Comments": {
-                "MissingText": true
-              }
-            },
-            "rootUrl": {
-              "Comments": {
-                "MissingText": true
-              }
-            }
           }
         }
       }

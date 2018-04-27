@@ -141,11 +141,25 @@
                 this._samplingMode
             );
 
-            this._texture.isReady = true;
-
-            this._updateInternalTexture();
-            if (this._onLoadObservable && this._onLoadObservable.hasObservers()) {
-                this.onLoadObservable.notifyObservers(this);
+            if (!this.video.autoplay) {
+                let oldHandler = this.video.onplaying;
+                this.video.onplaying = () => {
+                    this.video.onplaying = oldHandler;
+                    this._texture!.isReady = true;
+                    this._updateInternalTexture();
+                    this.video.pause();
+                    if (this._onLoadObservable && this._onLoadObservable.hasObservers()) {
+                        this.onLoadObservable.notifyObservers(this);
+                    }
+                };
+                this.video.play();
+            }
+            else {
+                this._texture.isReady = true;
+                this._updateInternalTexture();
+                if (this._onLoadObservable && this._onLoadObservable.hasObservers()) {
+                    this.onLoadObservable.notifyObservers(this);
+                }
             }
         };
 
@@ -211,7 +225,7 @@
         }
 
         public dispose(): void {
-            super.dispose();            
+            super.dispose();
             this.video.removeEventListener("canplay", this._createInternalTexture);
             this.video.removeEventListener("paused", this._updateInternalTexture);
             this.video.removeEventListener("seeked", this._updateInternalTexture);
