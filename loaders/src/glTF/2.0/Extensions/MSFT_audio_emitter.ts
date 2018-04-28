@@ -42,7 +42,6 @@ module BABYLON.GLTF2.Extensions {
     interface _ILoaderEmitter extends _IEmitter, _IArrayItem {
         _babylonData?: { 
             sound?: WeightedSound;
-            meshes: AbstractMesh[];
             loaded: Promise<void>;
         };
         _babylonSounds: Sound[];
@@ -225,7 +224,7 @@ module BABYLON.GLTF2.Extensions {
             return clip._objectURL;
         }
 
-        private _loadEmitterAsync(context: string, emitter: _ILoaderEmitter, babylonMesh?: Mesh): Promise<void> {
+        private _loadEmitterAsync(context: string, emitter: _ILoaderEmitter): Promise<void> {
             emitter._babylonSounds = emitter._babylonSounds || [];
             if (!emitter._babylonData) {
                 const clipPromises = new Array<Promise<void>>();
@@ -243,14 +242,7 @@ module BABYLON.GLTF2.Extensions {
                 for (let i = 0; i < emitter.clips.length; i++) {
                     const clip = GLTFLoader._GetProperty(`#/extensions/${this.name}/clips`, this._clips, emitter.clips[i].clip);
                     clipPromises.push(this._loadClipAsync(`#/extensions/${NAME}/clips/${emitter.clips[i].clip}`, clip).then((objectURL: string) => {
-                        const sound = emitter._babylonSounds[i] = new Sound(name, objectURL, this._loader._babylonScene, null, options);
-                        if (babylonMesh) {
-                            sound.attachToMesh(babylonMesh);
-                            if (direction || innerAngle != undefined || outerAngle != undefined) {
-                                sound.setLocalDirectionToMesh(Vector3.FromArray(direction || [1, 0, 0]));
-                                sound.setDirectionalCone(Tools.ToDegrees(innerAngle == undefined ? TwoPI : innerAngle), Tools.ToDegrees(outerAngle == undefined ? TwoPI : outerAngle), 0);
-                            }
-                        }
+                        emitter._babylonSounds[i] = new Sound(name, objectURL, this._loader._babylonScene, null, options);
                         return Promise.resolve();
                     }));
                 }
@@ -266,14 +258,10 @@ module BABYLON.GLTF2.Extensions {
                 });
 
                 emitter._babylonData = {
-                    meshes: [],
                     loaded: promise
                 };
             }
 
-            if (babylonMesh) {
-                emitter._babylonData.meshes.push(babylonMesh);
-            }
             return emitter._babylonData.loaded;
         }
 
@@ -305,7 +293,18 @@ module BABYLON.GLTF2.Extensions {
                     _ArrayItem.Assign(this._emitters);
                     for (const emitterIndex of extension.emitters) {
                         const emitter = GLTFLoader._GetProperty(extensionContext, this._emitters, emitterIndex);
-                        promises.push(this._loadEmitterAsync(`#/extensions/${this.name}/emitter/${emitter._index}`, emitter, node._babylonMesh));
+                        promises.push(this._loadEmitterAsync(`#/extensions/${this.name}/emitter/${emitter._index}`, emitter).then(() => {
+                            if (node._babylonMesh) {
+                                for (const sound of emitter._babylonSounds) {
+                                    sound.attachToMesh(node._babylonMesh);
+                                    if (emitter.direction || emitter.innerAngle != undefined || emitter.outerAngle != undefined) {
+                                        sound.setLocalDirectionToMesh(Vector3.FromArray(emitter.direction || [1, 0, 0]));
+                                        sound.setDirectionalCone(Tools.ToDegrees(emitter.innerAngle == undefined ? TwoPI : emitter.innerAngle),
+                                                                 Tools.ToDegrees(emitter.outerAngle == undefined ? TwoPI : emitter.outerAngle), 0);
+                                    }
+                                }
+                            }
+                        }));
                     }
 
                     return Promise.all(promises).then(() => {});
@@ -337,8 +336,8 @@ module BABYLON.GLTF2.Extensions {
             }
             const babylonAnimation = babylonAnimationGroup.targetedAnimations[0];
             const emitterIndex = event.emitter;
-            const emitter = GLTFLoader._GetProperty(context, this._emitters, emitterIndex);
-            return emitter._babylonData!.loaded.then(()=> {
+            const emitter = GLTFLoader._GetProperty(`#/extensions/${this.name}/emitter`, this._emitters, emitterIndex);
+            return this._loadEmitterAsync(context, emitter).then(()=> {
                 const sound = emitter._babylonData!.sound;
                 if (sound) {
                     const action = event.action;
