@@ -135,18 +135,6 @@ module BABYLON.GLTF2.Extensions {
                         _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
                         _targetPath: 'volume'
                     },
-                    direction: {
-                        _inputAnimationType: Animation.ANIMATIONTYPE_VECTOR3,
-                        _targetPath: 'direction'
-                    },
-                    innerAngle: {
-                        _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
-                        _targetPath: 'directionalConeInnerAngle'
-                    },
-                    outerAngle: {
-                        _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
-                        _targetPath: 'directionalConeOuterAngle'
-                    },
                 }
             }
 

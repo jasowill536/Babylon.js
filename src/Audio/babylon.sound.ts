@@ -18,6 +18,9 @@ module BABYLON {
         private _startTime: number = 0;
         private _startOffset: number = 0;
         private _position: Vector3 = Vector3.Zero();
+        /** @hidden */ 
+        public _positionInEmitterSpace: boolean = false;
+        public _normalizeAnimationGroupsToBeginAtZero = true; 
         private _localDirection: Vector3 = new Vector3(1, 0, 0);
         private _volume: number = 1;
         private _isReadyToPlay: boolean = false;
@@ -677,8 +680,15 @@ module BABYLON {
                 return;
             }
             let mesh = node as AbstractMesh;
-            let boundingInfo = mesh.getBoundingInfo();
-            this.setPosition(boundingInfo.boundingSphere.centerWorld);
+            if (this._positionInEmitterSpace) {
+                mesh.worldMatrixFromCache.invertToRef(Tmp.Matrix[0]);
+                this.setPosition(Tmp.Matrix[0].getTranslation());
+            }
+            else 
+            {
+                let boundingInfo = mesh.getBoundingInfo();
+                this.setPosition(boundingInfo.boundingSphere.centerWorld);
+            }
             if (Engine.audioEngine.canUseWebAudio && this._isDirectional && this.isPlaying) {
                 this._updateDirection();
             }

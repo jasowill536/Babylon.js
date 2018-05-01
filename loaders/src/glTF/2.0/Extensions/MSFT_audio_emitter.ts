@@ -15,9 +15,18 @@ module BABYLON.GLTF2.Extensions {
         emitters: number[];
     }
 
+    const enum _DistanceModel {
+        linear = "linear",
+        inverse = "inverse",
+        exponential = "exponential",
+    }
+
     interface _IEmitter {
         name?: string;
-        direction?: number[];
+        distanceModel?: _DistanceModel;
+        refDistance?: number;
+        maxDistance?: number;
+        rolloffFactor?: number;
         innerAngle?: number;
         outerAngle?: number;
         loop?: boolean;
@@ -73,7 +82,6 @@ module BABYLON.GLTF2.Extensions {
 
     export class WeightedSound {
         public loop: boolean = false;
-        private _localDirection: Vector3 = new Vector3(1, 0, 0);
         private _coneInnerAngle: number = TwoPI;
         private _coneOuterAngle: number = TwoPI;
         private _volume: number = 1;
@@ -144,16 +152,6 @@ module BABYLON.GLTF2.Extensions {
                 for (let sound of this._sounds) {
                     sound.volume = value;
                 }
-            }
-        }
-
-        public get direction(): Vector3 {
-            return this._localDirection;
-        }
-
-        public set direction(value: Vector3) {
-            for (let sound of this._sounds) {
-                sound.direction = value;
             }
         }
 
@@ -234,7 +232,6 @@ module BABYLON.GLTF2.Extensions {
                     autoplay: false,
                     volume: emitter.volume == undefined ? 1 : emitter.volume,
                 };
-                let direction = emitter.direction;
                 let innerAngle = emitter.innerAngle;
                 let outerAngle = emitter.outerAngle;
 
@@ -242,7 +239,12 @@ module BABYLON.GLTF2.Extensions {
                 for (let i = 0; i < emitter.clips.length; i++) {
                     const clip = GLTFLoader._GetProperty(`#/extensions/${this.name}/clips`, this._clips, emitter.clips[i].clip);
                     clipPromises.push(this._loadClipAsync(`#/extensions/${NAME}/clips/${emitter.clips[i].clip}`, clip).then((objectURL: string) => {
-                        emitter._babylonSounds[i] = new Sound(name, objectURL, this._loader._babylonScene, null, options);
+                        const sound = emitter._babylonSounds[i] = new Sound(name, objectURL, this._loader._babylonScene, null, options);
+                        sound.refDistance = emitter.refDistance || 1;
+                        sound.maxDistance = emitter.maxDistance || 256;
+                        sound.rolloffFactor = emitter.rolloffFactor || 1;
+                        sound.distanceModel = emitter.distanceModel || 'exponential';
+                        sound._positionInEmitterSpace = true;
                         return Promise.resolve();
                     }));
                 }
@@ -250,7 +252,6 @@ module BABYLON.GLTF2.Extensions {
                 const promise = Promise.all(clipPromises).then(() => {
                     let weights = emitter.clips.map(clip => { return clip.weight || 1; });
                     let weightedSound = new WeightedSound(emitter.loop || false, emitter._babylonSounds, weights);
-                    if (direction) weightedSound.direction = Vector3.FromArray(direction);
                     if (innerAngle) weightedSound.directionalConeInnerAngle = innerAngle;
                     if (outerAngle) weightedSound.directionalConeOuterAngle = outerAngle;
                     if (emitter.volume) weightedSound.volume = emitter.volume;
@@ -273,8 +274,9 @@ module BABYLON.GLTF2.Extensions {
                     _ArrayItem.Assign(this._emitters);
                     for (const emitterIndex of extension.emitters) {
                         const emitter = GLTFLoader._GetProperty(extensionContext, this._emitters, emitterIndex);
-                        if (emitter.direction || emitter.innerAngle != undefined || emitter.outerAngle != undefined) {
-                            throw new Error(`${extensionContext}: Direction properties are not allowed on emitters attached to a scene`);
+                        if (emitter.refDistance != undefined || emitter.maxDistance != undefined || emitter.rolloffFactor != undefined ||
+                            emitter.distanceModel != undefined || emitter.innerAngle != undefined || emitter.outerAngle != undefined) {
+                            throw new Error(`${extensionContext}: Direction or Distance properties are not allowed on emitters attached to a scene`);
                         }
 
                         promises.push(this._loadEmitterAsync(`#/extensions/${this.name}/emitter/${emitter._index}`, emitter));
@@ -297,8 +299,8 @@ module BABYLON.GLTF2.Extensions {
                             if (node._babylonMesh) {
                                 for (const sound of emitter._babylonSounds) {
                                     sound.attachToMesh(node._babylonMesh);
-                                    if (emitter.direction || emitter.innerAngle != undefined || emitter.outerAngle != undefined) {
-                                        sound.setLocalDirectionToMesh(Vector3.FromArray(emitter.direction || [1, 0, 0]));
+                                    if (emitter.innerAngle != undefined || emitter.outerAngle != undefined) {
+                                        sound.setLocalDirectionToMesh(new Vector3(0, 0, -1));
                                         sound.setDirectionalCone(Tools.ToDegrees(emitter.innerAngle == undefined ? TwoPI : emitter.innerAngle),
                                                                  Tools.ToDegrees(emitter.outerAngle == undefined ? TwoPI : emitter.outerAngle), 0);
                                     }
