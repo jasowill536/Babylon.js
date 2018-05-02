@@ -63,6 +63,7 @@ module BABYLON.GLTF2.Extensions {
 
     const enum _AnimationEventAction {
         play = "play",
+        pause = "pause",
         stop = "stop",
     }
 
@@ -70,7 +71,7 @@ module BABYLON.GLTF2.Extensions {
         action: _AnimationEventAction,
         emitter: number;
         time: number;
-        offset?: number;
+        startOffset?: number;
     }
 
     interface _ILoaderAnimationEvent extends _IAnimationEvent, _IArrayItem {
@@ -164,37 +165,40 @@ module BABYLON.GLTF2.Extensions {
             }
         }
 
-        public stop(offset?: number) {
-            this.isPlaying = false;
+        public pause() {
+            this.isPaused = true;
             if (this._currentIndex !== undefined) {
-                if (offset == -1) {
-                    this._sounds[this._currentIndex].pause();
-                } else {
-                    this._sounds[this._currentIndex].stop();
-                }
+                this._sounds[this._currentIndex].pause();
             }
         }
 
-        public play(offset?: number) {
-            let randomValue = Math.random();
-            let total = 0;
-            for (let i = 0; i < this._weights.length; i++) {
-                total += this._weights[i];
-                if (randomValue <= total) {
-                    this._currentIndex = i;
-                    break;
+        public stop() {
+            this.isPlaying = false;
+            if (this._currentIndex !== undefined) {
+                this._sounds[this._currentIndex].stop();
+            }
+        }
+
+        public play(startOffset?: number) {
+            if (!this.isPaused) {
+                let randomValue = Math.random();
+                let total = 0;
+                for (let i = 0; i < this._weights.length; i++) {
+                    total += this._weights[i];
+                    if (randomValue <= total) {
+                        this._currentIndex = i;
+                        break;
+                    }
                 }
             }
             const sound = this._sounds[this._currentIndex];
             if (sound.isReady()) {
-                if (offset == -1) {
-                    offset = undefined;
-                }
-                sound.play(0, offset);
+                sound.play(0, this.isPaused ? undefined : startOffset);
             } else {
                 sound.autoplay = true;
             }
             this.isPlaying = true;
+            this.isPaused = false;
         }
     }
 
@@ -332,6 +336,19 @@ module BABYLON.GLTF2.Extensions {
             });
         }
 
+        private _getEventAction(sound: WeightedSound, action: _AnimationEventAction, time: number, startOffset?: number): (currentFrame: number) => void {
+            return (currentFrame: number) => {
+                if (action == _AnimationEventAction.play) {
+                    const frameOffset = (startOffset == undefined ? 0 : startOffset) + (currentFrame - time);
+                    sound.play(frameOffset);
+                } else if (action == _AnimationEventAction.stop) {
+                    sound.stop();
+                } else if (action == _AnimationEventAction.pause) {
+                    sound.pause();
+                }
+            };
+        }
+
         private _loadAnimationEventAsync(context: string, animationContext: string, animation: _ILoaderAnimation, event: _ILoaderAnimationEvent, babylonAnimationGroup: AnimationGroup): Promise<void> {
             if (babylonAnimationGroup.targetedAnimations.length == 0) {
                 return Promise.resolve();
@@ -342,18 +359,7 @@ module BABYLON.GLTF2.Extensions {
             return this._loadEmitterAsync(context, emitter).then(()=> {
                 const sound = emitter._babylonData!.sound;
                 if (sound) {
-                    const action = event.action;
-                    const offset = event.offset;
-                    const time = event.time;
-    
-                    var babylonAnimationEvent = new AnimationEvent(time, (currentFrame: number) => {
-                        if (action == _AnimationEventAction.play) {
-                            const frameOffset = offset == -1 ? offset : ((offset == undefined ? 0 : offset) + (currentFrame - time));
-                            sound.play(frameOffset);
-                        } else if (action == _AnimationEventAction.stop) {
-                            sound.stop(offset);
-                        }
-                    });
+                    var babylonAnimationEvent = new AnimationEvent(event.time, this._getEventAction(sound, event.action, event.time, event.startOffset));
                     babylonAnimation.animation.addEvent(babylonAnimationEvent);
                 }
                 return Promise.resolve();
