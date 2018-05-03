@@ -4,7 +4,6 @@ module BABYLON.GLTF2.Extensions {
     // https://github.com/najadojo/glTF/tree/MSFT_audio_emitter/extensions/2.0/Vendor/MSFT_audio_emitter
 
     const NAME = "MSFT_audio_emitter";
-    const TwoPI = Math.PI * 2;
 
     interface _IClipReference {
         clip: number;
@@ -83,8 +82,8 @@ module BABYLON.GLTF2.Extensions {
 
     export class WeightedSound {
         public loop: boolean = false;
-        private _coneInnerAngle: number = TwoPI;
-        private _coneOuterAngle: number = TwoPI;
+        private _coneInnerAngle: number = Math.PI;
+        private _coneOuterAngle: number = Math.PI;
         private _volume: number = 1;
         public isPlaying: boolean = false;
         public isPaused: boolean = false;
@@ -118,7 +117,7 @@ module BABYLON.GLTF2.Extensions {
                 }
 
                 this._coneInnerAngle = value;
-                const degrees = Tools.ToDegrees(value);
+                const degrees = 2 * Tools.ToDegrees(value);
                 for (let sound of this._sounds) {
                     sound.directionalConeInnerAngle = degrees;
                 }
@@ -137,7 +136,7 @@ module BABYLON.GLTF2.Extensions {
                 }
 
                 this._coneOuterAngle = value;
-                const degrees = Tools.ToDegrees(value)
+                const degrees = 2 * Tools.ToDegrees(value)
                 for (let sound of this._sounds) {
                     sound.directionalConeOuterAngle = degrees;
                 }
@@ -304,9 +303,9 @@ module BABYLON.GLTF2.Extensions {
                                 for (const sound of emitter._babylonSounds) {
                                     sound.attachToMesh(node._babylonMesh);
                                     if (emitter.innerAngle != undefined || emitter.outerAngle != undefined) {
-                                        sound.setLocalDirectionToMesh(new Vector3(0, 0, -1));
-                                        sound.setDirectionalCone(Tools.ToDegrees(emitter.innerAngle == undefined ? TwoPI : emitter.innerAngle),
-                                                                 Tools.ToDegrees(emitter.outerAngle == undefined ? TwoPI : emitter.outerAngle), 0);
+                                        sound.setLocalDirectionToMesh(new Vector3(0, -1, 0));
+                                        sound.setDirectionalCone(2 * Tools.ToDegrees(emitter.innerAngle == undefined ? Math.PI : emitter.innerAngle),
+                                                                 2 * Tools.ToDegrees(emitter.outerAngle == undefined ? Math.PI : emitter.outerAngle), 0);
                                     }
                                 }
                             }
