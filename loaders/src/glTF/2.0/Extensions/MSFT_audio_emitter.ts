@@ -303,7 +303,7 @@ module BABYLON.GLTF2.Extensions {
                                 for (const sound of emitter._babylonSounds) {
                                     sound.attachToMesh(node._babylonMesh);
                                     if (emitter.innerAngle != undefined || emitter.outerAngle != undefined) {
-                                        sound.setLocalDirectionToMesh(new Vector3(0, -1, 0));
+                                        sound.setLocalDirectionToMesh(new Vector3(0, 0, 1));
                                         sound.setDirectionalCone(2 * Tools.ToDegrees(emitter.innerAngle == undefined ? Math.PI : emitter.innerAngle),
                                                                  2 * Tools.ToDegrees(emitter.outerAngle == undefined ? Math.PI : emitter.outerAngle), 0);
                                     }
