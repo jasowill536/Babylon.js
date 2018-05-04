@@ -750,6 +750,13 @@
             return Color3.Lerp(startValue, endValue, gradient);
         }
 
+        /**
+         * Interpolates a Color4 linearly
+         * @param startValue Start value of the animation curve
+         * @param endValue End value of the animation curve
+         * @param gradient Scalar amount to interpolate
+         * @returns Interpolated Color4 value
+         */
         public color4InterpolateFunction(startValue: Color4, endValue: Color4, gradient: number): Color4 {
             return Color4.Lerp(startValue, endValue, gradient);
         }

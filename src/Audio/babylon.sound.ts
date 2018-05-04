@@ -12,6 +12,9 @@ module BABYLON {
         public distanceModel: string = "linear";
         private _panningModel: string = "equalpower";
         public onended: () => any;
+        /**
+         * Observable event when the current playing sound finishes.
+         */
         public onEndedObservable = new Observable<Sound>();
         private _playbackRate: number = 1;
         private _streaming: boolean = false;
@@ -20,7 +23,6 @@ module BABYLON {
         private _position: Vector3 = Vector3.Zero();
         /** @hidden */ 
         public _positionInEmitterSpace: boolean = false;
-        public _normalizeAnimationGroupsToBeginAtZero = true; 
         private _localDirection: Vector3 = new Vector3(1, 0, 0);
         private _volume: number = 1;
         private _isReadyToPlay: boolean = false;
