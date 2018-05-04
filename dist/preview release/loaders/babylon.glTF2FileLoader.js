@@ -89,6 +89,8 @@ var BABYLON;
              * If true, no extra effects are applied to transparent pixels.
              */
             this.transparencyAsCoverage = false;
+            /** @hidden */
+            this._normalizeAnimationGroupsToBeginAtZero = true;
             /**
              * Function called before loading a url referenced by the asset.
              */
@@ -401,20 +403,19 @@ var BABYLON;
             loader.useClipPlane = this.useClipPlane;
             loader.compileShadowGenerators = this.compileShadowGenerators;
             loader.transparencyAsCoverage = this.transparencyAsCoverage;
+            loader._normalizeAnimationGroupsToBeginAtZero = this._normalizeAnimationGroupsToBeginAtZero;
             loader.preprocessUrlAsync = this.preprocessUrlAsync;
             loader.onMeshLoadedObservable.add(function (mesh) { return _this.onMeshLoadedObservable.notifyObservers(mesh); });
             loader.onTextureLoadedObservable.add(function (texture) { return _this.onTextureLoadedObservable.notifyObservers(texture); });
             loader.onMaterialLoadedObservable.add(function (material) { return _this.onMaterialLoadedObservable.notifyObservers(material); });
             loader.onCameraLoadedObservable.add(function (camera) { return _this.onCameraLoadedObservable.notifyObservers(camera); });
-            loader.onExtensionLoadedObservable.add(function (extension) {
-                _this.onExtensionLoadedObservable.notifyObservers(extension);
-                _this.onExtensionLoadedObservable.clear();
-            });
+            loader.onExtensionLoadedObservable.add(function (extension) { return _this.onExtensionLoadedObservable.notifyObservers(extension); });
             loader.onCompleteObservable.add(function () {
                 _this.onMeshLoadedObservable.clear();
                 _this.onTextureLoadedObservable.clear();
                 _this.onMaterialLoadedObservable.clear();
                 _this.onCameraLoadedObservable.clear();
+                _this.onExtensionLoadedObservable.clear();
                 _this.onCompleteObservable.notifyObservers(_this);
                 _this.onCompleteObservable.clear();
             });
@@ -615,7 +616,7 @@ var BABYLON;
 //# sourceMappingURL=babylon.glTFLoaderUtilities.js.map
 
 /// <reference path="../../../../dist/preview release/babylon.d.ts"/>
-/// <reference path="../../../../dist/babylon.glTF2Interface.d.ts"/>
+/// <reference path="../../../../dist/preview release/gltf2Interface/babylon.glTF2Interface.d.ts"/>
 
 //# sourceMappingURL=babylon.glTFLoaderInterfaces.js.map
 
@@ -666,6 +667,8 @@ var BABYLON;
                  * If true, no extra effects are applied to transparent pixels.
                  */
                 this.transparencyAsCoverage = false;
+                /** @hidden */
+                this._normalizeAnimationGroupsToBeginAtZero = true;
                 /**
                  * Function called before loading a url referenced by the asset.
                  */
@@ -1398,6 +1401,7 @@ var BABYLON;
                 return Promise.all(promises).then(function () { });
             };
             GLTFLoader.prototype._loadAnimationAsync = function (context, animation) {
+                var _this = this;
                 var babylonAnimationGroup = new BABYLON.AnimationGroup(animation.name || "animation" + animation._index, this._babylonScene);
                 animation._babylonAnimationGroup = babylonAnimationGroup;
                 var promises = new Array();
@@ -1408,7 +1412,7 @@ var BABYLON;
                     promises.push(this._loadAnimationChannelAsync(context + "/channels/" + channel._index, context, animation, channel, babylonAnimationGroup));
                 }
                 return Promise.all(promises).then(function () {
-                    babylonAnimationGroup.normalize();
+                    babylonAnimationGroup.normalize(_this._normalizeAnimationGroupsToBeginAtZero ? 0 : null);
                 });
             };
             GLTFLoader.prototype._loadAnimationChannelAsync = function (context, animationContext, animation, channel, babylonAnimationGroup) {
@@ -1857,6 +1861,10 @@ var BABYLON;
             /** @hidden */
             GLTFLoader.prototype._loadTextureAsync = function (context, textureInfo, assign) {
                 var _this = this;
+                var promise = GLTF2.GLTFLoaderExtension._LoadTextureAsync(this, context, textureInfo, assign);
+                if (promise) {
+                    return promise;
+                }
                 var texture = GLTFLoader._GetProperty(context + "/index", this._gltf.textures, textureInfo.index);
                 context = "#/textures/" + textureInfo.index;
                 var promises = new Array();
@@ -2194,6 +2202,8 @@ var BABYLON;
             GLTFLoaderExtension.prototype._loadVertexDataAsync = function (context, primitive, babylonMesh) { return null; };
             /** Override this method to modify the default behavior for loading materials. */
             GLTFLoaderExtension.prototype._loadMaterialAsync = function (context, material, babylonMesh, babylonDrawMode, assign) { return null; };
+            /** Override this method to modify the default behavior for loading textures. */
+            GLTFLoaderExtension.prototype._loadTextureAsync = function (context, textureInfo, assign) { return null; };
             /** Override this method to modify the default behavior for loading uris. */
             GLTFLoaderExtension.prototype._loadUriAsync = function (context, uri) { return null; };
             // #endregion
@@ -2232,6 +2242,10 @@ var BABYLON;
             /** Helper method called by the loader to allow extensions to override loading materials. */
             GLTFLoaderExtension._LoadMaterialAsync = function (loader, context, material, babylonMesh, babylonDrawMode, assign) {
                 return loader._applyExtensions(function (extension) { return extension._loadMaterialAsync(context, material, babylonMesh, babylonDrawMode, assign); });
+            };
+            /** Helper method called by the loader to allow extensions to override loading textures. */
+            GLTFLoaderExtension._LoadTextureAsync = function (loader, context, textureInfo, assign) {
+                return loader._applyExtensions(function (extension) { return extension._loadTextureAsync(context, textureInfo, assign); });
             };
             /** Helper method called by the loader to allow extensions to override loading uris. */
             GLTFLoaderExtension._LoadUriAsync = function (loader, context, uri) {
@@ -2906,3 +2920,66 @@ var BABYLON;
 })(BABYLON || (BABYLON = {}));
 
 //# sourceMappingURL=KHR_lights.js.map
+
+/// <reference path="../../../../../dist/preview release/babylon.d.ts"/>
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var BABYLON;
+(function (BABYLON) {
+    var GLTF2;
+    (function (GLTF2) {
+        var Extensions;
+        (function (Extensions) {
+            var NAME = "KHR_texture_transform";
+            /**
+             * [Specification](https://github.com/AltspaceVR/glTF/blob/avr-sampler-offset-tile/extensions/2.0/Khronos/KHR_texture_transform/README.md) (Experimental)
+             */
+            var KHR_texture_transform = /** @class */ (function (_super) {
+                __extends(KHR_texture_transform, _super);
+                function KHR_texture_transform() {
+                    var _this = _super !== null && _super.apply(this, arguments) || this;
+                    _this.name = NAME;
+                    return _this;
+                }
+                KHR_texture_transform.prototype._loadTextureAsync = function (context, textureInfo, assign) {
+                    var _this = this;
+                    return this._loadExtensionAsync(context, textureInfo, function (extensionContext, extension) {
+                        return _this._loader._loadTextureAsync(context, textureInfo, function (babylonTexture) {
+                            if (extension.offset) {
+                                babylonTexture.uOffset = extension.offset[0];
+                                babylonTexture.vOffset = extension.offset[1];
+                            }
+                            // Always rotate around the origin.
+                            babylonTexture.uRotationCenter = 0;
+                            babylonTexture.vRotationCenter = 0;
+                            if (extension.rotation) {
+                                babylonTexture.wAng = -extension.rotation;
+                            }
+                            if (extension.scale) {
+                                babylonTexture.uScale = extension.scale[0];
+                                babylonTexture.vScale = extension.scale[1];
+                            }
+                            if (extension.texCoord != undefined) {
+                                babylonTexture.coordinatesIndex = extension.texCoord;
+                            }
+                            assign(babylonTexture);
+                        });
+                    });
+                };
+                return KHR_texture_transform;
+            }(GLTF2.GLTFLoaderExtension));
+            Extensions.KHR_texture_transform = KHR_texture_transform;
+            GLTF2.GLTFLoader._Register(NAME, function (loader) { return new KHR_texture_transform(loader); });
+        })(Extensions = GLTF2.Extensions || (GLTF2.Extensions = {}));
+    })(GLTF2 = BABYLON.GLTF2 || (BABYLON.GLTF2 = {}));
+})(BABYLON || (BABYLON = {}));
+
+//# sourceMappingURL=KHR_texture_transform.js.map

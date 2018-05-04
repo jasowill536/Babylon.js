@@ -81,6 +81,9 @@ module BABYLON.GLTF2 {
          */
         public transparencyAsCoverage = false;
 
+        /** @hidden */
+        public _normalizeAnimationGroupsToBeginAtZero = true;
+
         /**
          * Function called before loading a url referenced by the asset.
          */
@@ -933,7 +936,7 @@ module BABYLON.GLTF2 {
             }
 
             return Promise.all(promises).then(() => {
-                babylonAnimationGroup.normalize();
+                babylonAnimationGroup.normalize(this._normalizeAnimationGroupsToBeginAtZero ? 0 : null);
             });
         }
 
@@ -1445,6 +1448,11 @@ module BABYLON.GLTF2 {
 
         /** @hidden */
         public _loadTextureAsync(context: string, textureInfo: ITextureInfo, assign: (texture: Texture) => void): Promise<void> {
+            const promise = GLTFLoaderExtension._LoadTextureAsync(this, context, textureInfo, assign);
+            if (promise) {
+                return promise;
+            }
+
             const texture = GLTFLoader._GetProperty(`${context}/index`, this._gltf.textures, textureInfo.index);
             context = `#/textures/${textureInfo.index}`;
 
