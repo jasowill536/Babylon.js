@@ -180,6 +180,7 @@ module BABYLON.GLTF2.Extensions {
 
         public play(startOffset?: number) {
             if (!this.isPaused) {
+                this.stop();
                 let randomValue = Math.random();
                 let total = 0;
                 for (let i = 0; i < this._weights.length; i++) {
