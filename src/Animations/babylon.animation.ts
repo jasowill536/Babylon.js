@@ -1085,7 +1085,7 @@
         }
 
         /**
-         * Get the Vectpr2 animation type
+         * Get the Vector2 animation type
          */
         public static get ANIMATIONTYPE_VECTOR2(): number {
             return Animation._ANIMATIONTYPE_VECTOR2;

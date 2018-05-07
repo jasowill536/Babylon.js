@@ -107,6 +107,7 @@ module BABYLON.GLTF2 {
 
     /** @hidden */
     export interface _ILoaderTexture extends ITexture, _IArrayItem {
+        _babylonTexture?: Texture;
     }
 
     /** @hidden */

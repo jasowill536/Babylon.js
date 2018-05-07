@@ -75,6 +75,82 @@ module BABYLON.GLTF2.Extensions {
         return inputKeys;
     }
 
+    const Vector2ToFloat0KeyTransform = (inputKeys: Array<IAnimationKey>): Array<IAnimationKey> => {
+        const outputKeys: Array<IAnimationKey> = [];
+        for (const key of inputKeys) {
+            outputKeys.push({
+                interpolation: key.interpolation,
+                frame: key.frame,
+                value: key.value.x,
+                inTangent: key.inTangent ? key.inTangent.x : undefined,
+                outTangent: key.outTangent ? key.outTangent.x : undefined,
+            });
+        }
+        return outputKeys;
+    }
+
+    const Vector2ToFloat1KeyTransform = (inputKeys: Array<IAnimationKey>): Array<IAnimationKey> => {
+        const outputKeys: Array<IAnimationKey> = [];
+        for (const key of inputKeys) {
+            outputKeys.push({
+                interpolation: key.interpolation,
+                frame: key.frame,
+                value: key.value.y,
+                inTangent: key.inTangent ? key.inTangent.y : undefined,
+                outTangent: key.outTangent ? key.outTangent.y : undefined,
+            });
+        }
+        return outputKeys;
+    }
+
+    const _KHR_texture_transform_PATH_PROPERTIES = {
+        offset: {
+            _inputAnimationType: Animation.ANIMATIONTYPE_VECTOR2,
+            _targets: [{
+                transformKeys: Vector2ToFloat0KeyTransform,
+                animationType: Animation.ANIMATIONTYPE_FLOAT,
+                path: 'uOffset',
+            }, {
+                transformKeys: Vector2ToFloat1KeyTransform,
+                animationType: Animation.ANIMATIONTYPE_FLOAT,
+                path: 'vOffset',
+            }]
+        },
+        rotation: {
+            _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
+            _targets: [{
+                transformKeys: NegateFloatKeyTransform,
+                animationType: Animation.ANIMATIONTYPE_FLOAT,
+                path: 'wAng',
+            }]
+        },
+        scale: {
+            _inputAnimationType: Animation.ANIMATIONTYPE_VECTOR2,
+            _targets: [{
+                transformKeys: Vector2ToFloat0KeyTransform,
+                animationType: Animation.ANIMATIONTYPE_FLOAT,
+                path: 'uScale',
+            }, {
+                transformKeys: Vector2ToFloat1KeyTransform,
+                animationType: Animation.ANIMATIONTYPE_FLOAT,
+                path: 'vScale',
+            }]
+        }
+    };
+
+    const _KHR_texture_transform_getTarget = (loader: GLTFLoader, gltfContext: any): any[] | undefined => {
+        if (gltfContext && gltfContext.index != undefined) {
+            const texture = GLTFLoader._GetProperty('#/textures', loader._gltf.textures, gltfContext.index);
+            const result = [];
+            if (texture && texture._babylonTexture) {
+                result.push(texture._babylonTexture);
+            }
+
+            return result;
+        }
+        return undefined;
+    };
+
     const _PATH_PROPERTIES: any = {
         extensions: {
             KHR_lights: {
@@ -152,6 +228,18 @@ module BABYLON.GLTF2.Extensions {
                 return undefined;
             },
             pbrMetallicRoughness: {
+                baseColorTexture: {
+                    _getTarget: _KHR_texture_transform_getTarget,
+                    extensions: {
+                        KHR_texture_transform: _KHR_texture_transform_PATH_PROPERTIES
+                    }
+                },
+                metallicRoughnessTexture: {
+                    _getTarget: _KHR_texture_transform_getTarget,
+                    extensions: {
+                        KHR_texture_transform: _KHR_texture_transform_PATH_PROPERTIES
+                    }
+                },
                 baseColorFactor: {
                     _inputAnimationType: Animation.ANIMATIONTYPE_COLOR4,
                     _targets: [{ 
@@ -181,6 +269,12 @@ module BABYLON.GLTF2.Extensions {
                 _inputAnimationType: Animation.ANIMATIONTYPE_COLOR3,
                 _targetPath: 'emissive'
             },
+            emissiveTexture: {
+                _getTarget: _KHR_texture_transform_getTarget,
+                extensions: {
+                    KHR_texture_transform: _KHR_texture_transform_PATH_PROPERTIES
+                }
+            },
             normalTexture: {
                 scale: {
                     _inputAnimationType: Animation.ANIMATIONTYPE_FLOAT,
@@ -206,6 +300,18 @@ module BABYLON.GLTF2.Extensions {
                             animationType: Animation.ANIMATIONTYPE_FLOAT,
                             path: 'alpha',
                         }]
+                    },
+                    specularGlossinessTexture: {
+                        _getTarget: _KHR_texture_transform_getTarget,
+                        extensions: {
+                            KHR_texture_transform: _KHR_texture_transform_PATH_PROPERTIES
+                        }
+                    },
+                    diffuseTexture: {
+                        _getTarget: _KHR_texture_transform_getTarget,
+                        extensions: {
+                            KHR_texture_transform: _KHR_texture_transform_PATH_PROPERTIES
+                        }
                     },
                     specularFactor: {
                         _inputAnimationType: Animation.ANIMATIONTYPE_COLOR3,
@@ -336,7 +442,7 @@ module BABYLON.GLTF2.Extensions {
                     case Animation.ANIMATIONTYPE_VECTOR2: {
                         getNextOutputValue = () => {
                             const value = Vector2.FromArray(data.output, outputBufferOffset);
-                            outputBufferOffset += 3;
+                            outputBufferOffset += 2;
                             return value;
                         };
                         break;
@@ -461,13 +567,13 @@ module BABYLON.GLTF2.Extensions {
                     if (gltfContext != undefined) {
                         gltfContext = gltfContext[pathPart];
                     }
+                }
 
-                    if (pathPartNode._getTarget !== undefined) {
+                if (pathPartNode._getTarget !== undefined) {
 
-                        result.objects = pathPartNode._getTarget(this._loader, gltfContext);
-                        if (result.objects == undefined) {
-                            throw new Error(`${context}: Invalid ${NAME} target path (${target})`);
-                        }
+                    result.objects = pathPartNode._getTarget(this._loader, gltfContext);
+                    if (result.objects == undefined) {
+                        throw new Error(`${context}: Invalid ${NAME} target path (${target})`);
                     }
                 }
 

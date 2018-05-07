@@ -1472,6 +1472,7 @@ module BABYLON.GLTF2 {
                 }
             });
             promises.push(deferred.promise);
+            texture._babylonTexture = babylonTexture;
 
             babylonTexture.name = texture.name || `texture${texture._index}`;
             babylonTexture.wrapU = samplerData.wrapU;
