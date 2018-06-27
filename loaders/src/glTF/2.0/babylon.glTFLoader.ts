@@ -10,7 +10,7 @@ module BABYLON.GLTF2 {
         _total?: number;
     }
 
-    class _ArrayItem {
+    export class _ArrayItem {
         public static Assign(values?: _IArrayItem[]): void {
             if (values) {
                 for (let index = 0; index < values.length; index++) {
