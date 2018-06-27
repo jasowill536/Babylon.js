@@ -1,9 +1,5 @@
-/// <reference path="../../../../dist/preview release/gltf2Interface/babylon.glTF2Interface.d.ts"/>
+/// <reference path="../../../../dist/preview release/glTF2Interface/babylon.glTF2Interface.d.ts"/>
 
-/**
- * Module for the Babylon glTF 2.0 exporter.  Should ONLY be used internally
- * @hidden 
- */
 module BABYLON.GLTF2 {
     /** 
      * Utility interface for storing vertex attribute data
@@ -36,81 +32,90 @@ module BABYLON.GLTF2 {
         /**
          * Stores all generated buffer views, which represents views into the main glTF buffer data
          */
-        private bufferViews: IBufferView[];
+        private _bufferViews: IBufferView[];
         /**
          * Stores all the generated accessors, which is used for accessing the data within the buffer views in glTF
          */
-        private accessors: IAccessor[];
+        private _accessors: IAccessor[];
         /**
          * Stores all the generated nodes, which contains transform and/or mesh information per node
          */
-        private nodes: INode[];
+        private _nodes: INode[];
         /**
          * Stores the glTF asset information, which represents the glTF version and this file generator
          */
-        private asset: IAsset;
+        private _asset: IAsset;
         /**
          * Stores all the generated glTF scenes, which stores multiple node hierarchies
          */
-        private scenes: IScene[];
+        private _scenes: IScene[];
         /**
          * Stores all the generated mesh information, each containing a set of primitives to render in glTF
          */
-        private meshes: IMesh[];
+        private _meshes: IMesh[];
         /**
          * Stores all the generated material information, which represents the appearance of each primitive
          */
-        private materials: IMaterial[];
+        public _materials: IMaterial[];
+
+        public _materialMap: { [materialID: number]: number };
         /**
          * Stores all the generated texture information, which is referenced by glTF materials
          */
-        private textures: ITexture[];
+        public _textures: ITexture[];
         /**
          * Stores all the generated image information, which is referenced by glTF textures
          */
-        private images: IImage[];
+        public _images: IImage[];
 
         /**
          * Stores all the texture samplers
          */
-        private samplers: ISampler[];
+        public _samplers: ISampler[];
         /**
          * Stores all the generated animation samplers, which is referenced by glTF animations
          */
         /**
          * Stores the animations for glTF models
          */
-        private animations: IAnimation[];
+        private _animations: IAnimation[];
         /**
          * Stores the total amount of bytes stored in the glTF buffer
          */
-        private totalByteLength: number;
+        private _totalByteLength: number;
         /**
          * Stores a reference to the Babylon scene containing the source geometry and material information
          */
-        private babylonScene: Scene;
+        private _babylonScene: Scene;
         /**
          * Stores a map of the image data, where the key is the file name and the value
          * is the image data
          */
-        private imageData: { [fileName: string]: { data: Uint8Array, mimeType: ImageMimeType } };
+        public _imageData: { [fileName: string]: { data: Uint8Array, mimeType: ImageMimeType } };
 
         /**
          * Stores a map of the unique id of a node to its index in the node array
          */
-        private nodeMap: { [key: number]: number };
+        private _nodeMap: { [key: number]: number };
 
         /**
          * Specifies if the Babylon scene should be converted to right-handed on export
          */
-        private convertToRightHandedSystem: boolean;
+        private _convertToRightHandedSystem: boolean;
 
         /**
          * Baked animation sample rate
          */
-        private animationSampleRate: number;
+        private _animationSampleRate: number;
 
-        private shouldExportTransformNode: ((babylonTransformNode: TransformNode) => boolean);
+        /**
+         * Callback which specifies if a transform node should be exported or not
+         */
+        private _shouldExportTransformNode: ((babylonTransformNode: TransformNode) => boolean);
+
+        private _localEngine: Engine;
+
+        private _glTFMaterialExporter: _GLTFMaterialExporter;
 
         /**
          * Creates a glTF Exporter instance, which can accept optional exporter options
@@ -118,23 +123,43 @@ module BABYLON.GLTF2 {
          * @param options Options to modify the behavior of the exporter
          */
         public constructor(babylonScene: Scene, options?: IExportOptions) {
-            this.asset = { generator: "BabylonJS", version: "2.0" };
-            this.babylonScene = babylonScene;
-            this.bufferViews = [];
-            this.accessors = [];
-            this.meshes = [];
-            this.scenes = [];
-            this.nodes = [];
-            this.images = [];
-            this.materials = [];
-            this.textures = [];
-            this.samplers = [];
-            this.animations = [];
-            this.imageData = {};
-            this.convertToRightHandedSystem = this.babylonScene.useRightHandedSystem ? false : true;
+            this._asset = { generator: "BabylonJS", version: "2.0" };
+            this._babylonScene = babylonScene;
+            this._bufferViews = [];
+            this._accessors = [];
+            this._meshes = [];
+            this._scenes = [];
+            this._nodes = [];
+            this._images = [];
+            this._materials = [];
+            this._materialMap = [];
+            this._textures = [];
+            this._samplers = [];
+            this._animations = [];
+            this._imageData = {};
+            this._convertToRightHandedSystem = this._babylonScene.useRightHandedSystem ? false : true;
             const _options = options || {};
-            this.shouldExportTransformNode = _options.shouldExportTransformNode ? _options.shouldExportTransformNode : (babylonTransformNode: TransformNode) => true;
-            this.animationSampleRate = _options.animationSampleRate ? _options.animationSampleRate : 1 / 60;
+            this._shouldExportTransformNode = _options.shouldExportTransformNode ? _options.shouldExportTransformNode : (babylonTransformNode: TransformNode) => true;
+            this._animationSampleRate = _options.animationSampleRate ? _options.animationSampleRate : 1 / 60;
+
+
+            this._glTFMaterialExporter = new _GLTFMaterialExporter(this);
+        }
+
+        /**
+         * Lazy load a local engine with premultiplied alpha set to false
+         */
+        public _getLocalEngine(): Engine {
+            if (!this._localEngine) {
+                const localCanvas = document.createElement('canvas');
+                localCanvas.id = "WriteCanvas";
+                localCanvas.width = 2048;
+                localCanvas.height = 2048;
+                this._localEngine = new Engine(localCanvas, true, { premultipliedAlpha: false, preserveDrawingBuffer: true });
+                this._localEngine.setViewport(new Viewport(0, 0, 1, 1));
+            }
+
+            return this._localEngine;
         }
 
         private reorderIndicesBasedOnPrimitiveMode(submesh: SubMesh, primitiveMode: number, babylonIndices: IndicesArray, byteOffset: number, binaryWriter: _BinaryWriter) {
@@ -180,7 +205,7 @@ module BABYLON.GLTF2 {
          * @param binaryWriter The binary data for the glTF file
          */
         private reorderVertexAttributeDataBasedOnPrimitiveMode(submesh: SubMesh, primitiveMode: number, sideOrientation: number, vertexBufferKind: string, meshAttributeArray: FloatArray, byteOffset: number, binaryWriter: _BinaryWriter): void {
-            if (this.convertToRightHandedSystem && sideOrientation === Material.ClockWiseSideOrientation) {
+            if (this._convertToRightHandedSystem && sideOrientation === Material.ClockWiseSideOrientation) {
                 switch (primitiveMode) {
                     case Material.TriangleFillMode: {
                         this.reorderTriangleFillMode(submesh, primitiveMode, sideOrientation, vertexBufferKind, meshAttributeArray, byteOffset, binaryWriter);
@@ -410,7 +435,7 @@ module BABYLON.GLTF2 {
          */
         private writeVertexAttributeData(vertices: Vector2[] | Vector3[] | Vector4[], byteOffset: number, vertexAttributeKind: string, meshAttributeArray: FloatArray, binaryWriter: _BinaryWriter) {
             for (let vertex of vertices) {
-                if (this.convertToRightHandedSystem && !(vertexAttributeKind === VertexBuffer.ColorKind) && !(vertex instanceof Vector2)) {
+                if (this._convertToRightHandedSystem && !(vertexAttributeKind === VertexBuffer.ColorKind) && !(vertex instanceof Vector2)) {
                     if (vertex instanceof Vector3) {
                         (vertexAttributeKind === VertexBuffer.PositionKind) ? _GLTFUtilities.GetRightHandedPositionVector3FromRef(vertex) : _GLTFUtilities.GetRightHandedNormalVector3FromRef(vertex);
                     }
@@ -443,7 +468,7 @@ module BABYLON.GLTF2 {
                     for (let k = 0, length = meshAttributeArray.length / stride; k < length; ++k) {
                         index = k * stride;
                         const vertexData = Vector3.FromArray(meshAttributeArray, index);
-                        if (this.convertToRightHandedSystem) {
+                        if (this._convertToRightHandedSystem) {
                             _GLTFUtilities.GetRightHandedPositionVector3FromRef(vertexData);
                         }
                         vertexAttributes.push(vertexData.asArray());
@@ -454,7 +479,7 @@ module BABYLON.GLTF2 {
                     for (let k = 0, length = meshAttributeArray.length / stride; k < length; ++k) {
                         index = k * stride;
                         const vertexData = Vector3.FromArray(meshAttributeArray, index);
-                        if (this.convertToRightHandedSystem) {
+                        if (this._convertToRightHandedSystem) {
                             _GLTFUtilities.GetRightHandedNormalVector3FromRef(vertexData);
                         }
                         vertexAttributes.push(vertexData.asArray());
@@ -465,7 +490,7 @@ module BABYLON.GLTF2 {
                     for (let k = 0, length = meshAttributeArray.length / stride; k < length; ++k) {
                         index = k * stride;
                         const vertexData = Vector4.FromArray(meshAttributeArray, index);
-                        if (this.convertToRightHandedSystem) {
+                        if (this._convertToRightHandedSystem) {
                             _GLTFUtilities.GetRightHandedVector4FromRef(vertexData);
                         }
                         vertexAttributes.push(vertexData.asArray());
@@ -484,7 +509,7 @@ module BABYLON.GLTF2 {
                 case VertexBuffer.UV2Kind: {
                     for (let k = 0, length = meshAttributeArray.length / stride; k < length; ++k) {
                         index = k * stride;
-                        vertexAttributes.push(this.convertToRightHandedSystem ? [meshAttributeArray[index], meshAttributeArray[index + 1]] : [meshAttributeArray[index], meshAttributeArray[index + 1]]);
+                        vertexAttributes.push(this._convertToRightHandedSystem ? [meshAttributeArray[index], meshAttributeArray[index + 1]] : [meshAttributeArray[index], meshAttributeArray[index + 1]]);
                     }
                     break;
                 }
@@ -508,61 +533,61 @@ module BABYLON.GLTF2 {
          * @returns json data as string
          */
         private generateJSON(shouldUseGlb: boolean, glTFPrefix?: string, prettyPrint?: boolean): string {
-            let buffer: IBuffer = { byteLength: this.totalByteLength };
+            let buffer: IBuffer = { byteLength: this._totalByteLength };
             let imageName: string;
             let imageData: { data: Uint8Array, mimeType: ImageMimeType };
             let bufferView: IBufferView;
-            let byteOffset: number = this.totalByteLength;
+            let byteOffset: number = this._totalByteLength;
 
             let glTF: IGLTF = {
-                asset: this.asset
+                asset: this._asset
             };
             if (buffer.byteLength) {
                 glTF.buffers = [buffer];
             }
-            if (this.nodes && this.nodes.length) {
-                glTF.nodes = this.nodes;
+            if (this._nodes && this._nodes.length) {
+                glTF.nodes = this._nodes;
             }
-            if (this.meshes && this.meshes.length) {
-                glTF.meshes = this.meshes;
+            if (this._meshes && this._meshes.length) {
+                glTF.meshes = this._meshes;
             }
-            if (this.scenes && this.scenes.length) {
-                glTF.scenes = this.scenes;
+            if (this._scenes && this._scenes.length) {
+                glTF.scenes = this._scenes;
                 glTF.scene = 0;
             }
-            if (this.bufferViews && this.bufferViews.length) {
-                glTF.bufferViews = this.bufferViews;
+            if (this._bufferViews && this._bufferViews.length) {
+                glTF.bufferViews = this._bufferViews;
             }
-            if (this.accessors && this.accessors.length) {
-                glTF.accessors = this.accessors;
+            if (this._accessors && this._accessors.length) {
+                glTF.accessors = this._accessors;
             }
-            if (this.animations && this.animations.length) {
-                glTF.animations = this.animations;
+            if (this._animations && this._animations.length) {
+                glTF.animations = this._animations;
             }
-            if (this.materials && this.materials.length) {
-                glTF.materials = this.materials;
+            if (this._materials && this._materials.length) {
+                glTF.materials = this._materials;
             }
-            if (this.textures && this.textures.length) {
-                glTF.textures = this.textures;
+            if (this._textures && this._textures.length) {
+                glTF.textures = this._textures;
             }
-            if (this.samplers && this.samplers.length) {
-                glTF.samplers = this.samplers;
+            if (this._samplers && this._samplers.length) {
+                glTF.samplers = this._samplers;
             }
-            if (this.images && this.images.length) {
+            if (this._images && this._images.length) {
                 if (!shouldUseGlb) {
-                    glTF.images = this.images;
+                    glTF.images = this._images;
                 }
                 else {
                     glTF.images = [];
 
-                    this.images.forEach((image) => {
+                    this._images.forEach((image) => {
                         if (image.uri) {
-                            imageData = this.imageData[image.uri];
+                            imageData = this._imageData[image.uri];
                             imageName = image.uri.split('.')[0] + " image";
                             bufferView = _GLTFUtilities.CreateBufferView(0, byteOffset, imageData.data.length, undefined, imageName);
                             byteOffset += imageData.data.buffer.byteLength;
-                            this.bufferViews.push(bufferView);
-                            image.bufferView = this.bufferViews.length - 1;
+                            this._bufferViews.push(bufferView);
+                            image.bufferView = this._bufferViews.length - 1;
                             image.name = imageName;
                             image.mimeType = imageData.mimeType;
                             image.uri = undefined;
@@ -591,36 +616,42 @@ module BABYLON.GLTF2 {
          * @param glTFPrefix Text to use when prefixing a glTF file
          * @returns GLTFData with glTF file data
          */
-        public _generateGLTF(glTFPrefix: string): GLTFData {
-            const binaryBuffer = this.generateBinary();
-            const jsonText = this.generateJSON(false, glTFPrefix, true);
-            const bin = new Blob([binaryBuffer], { type: 'application/octet-stream' });
+        public _generateGLTFAsync(glTFPrefix: string): Promise<GLTFData> {
+            return this._generateBinaryAsync().then(binaryBuffer => {
+                const jsonText = this.generateJSON(false, glTFPrefix, true);
+                const bin = new Blob([binaryBuffer], { type: 'application/octet-stream' });
 
-            const glTFFileName = glTFPrefix + '.gltf';
-            const glTFBinFile = glTFPrefix + '.bin';
+                const glTFFileName = glTFPrefix + '.gltf';
+                const glTFBinFile = glTFPrefix + '.bin';
 
-            const container = new GLTFData();
+                const container = new GLTFData();
 
-            container.glTFFiles[glTFFileName] = jsonText;
-            container.glTFFiles[glTFBinFile] = bin;
+                container.glTFFiles[glTFFileName] = jsonText;
+                container.glTFFiles[glTFBinFile] = bin;
 
-            if (this.imageData) {
-                for (let image in this.imageData) {
-                    container.glTFFiles[image] = new Blob([this.imageData[image].data], { type: this.imageData[image].mimeType });
+                if (this._imageData) {
+                    for (let image in this._imageData) {
+                        container.glTFFiles[image] = new Blob([this._imageData[image].data], { type: this._imageData[image].mimeType });
+                    }
                 }
-            }
 
-            return container;
+                return container;
+            });
+
         }
 
         /**
          * Creates a binary buffer for glTF
          * @returns array buffer for binary data
          */
-        private generateBinary(): ArrayBuffer {
+        private _generateBinaryAsync(): Promise<ArrayBuffer> {
             let binaryWriter = new _BinaryWriter(4);
-            this.createScene(this.babylonScene, binaryWriter);
-            return binaryWriter.getArrayBuffer();
+            return this.createSceneAsync(this._babylonScene, binaryWriter).then(() => {
+                if (this._localEngine) {
+                    this._localEngine.dispose();
+                }
+                return binaryWriter.getArrayBuffer();
+            });
         }
 
         /**
@@ -641,84 +672,87 @@ module BABYLON.GLTF2 {
          * @param glTFPrefix 
          * @returns object with glb filename as key and data as value
          */
-        public _generateGLB(glTFPrefix: string): GLTFData {
-            const binaryBuffer = this.generateBinary();
-            const jsonText = this.generateJSON(true);
-            const glbFileName = glTFPrefix + '.glb';
-            const headerLength = 12;
-            const chunkLengthPrefix = 8;
-            const jsonLength = jsonText.length;
-            let imageByteLength = 0;
+        public _generateGLBAsync(glTFPrefix: string): Promise<GLTFData> {
+            return this._generateBinaryAsync().then(binaryBuffer => {
+                const jsonText = this.generateJSON(true);
+                const glbFileName = glTFPrefix + '.glb';
+                const headerLength = 12;
+                const chunkLengthPrefix = 8;
+                const jsonLength = jsonText.length;
+                let imageByteLength = 0;
 
-            for (let key in this.imageData) {
-                imageByteLength += this.imageData[key].data.byteLength;
-            }
-            const jsonPadding = this._getPadding(jsonLength);
-            const binPadding = this._getPadding(binaryBuffer.byteLength);
-            const imagePadding = this._getPadding(imageByteLength);
+                for (let key in this._imageData) {
+                    imageByteLength += this._imageData[key].data.byteLength;
+                }
+                const jsonPadding = this._getPadding(jsonLength);
+                const binPadding = this._getPadding(binaryBuffer.byteLength);
+                const imagePadding = this._getPadding(imageByteLength);
 
-            const byteLength = headerLength + (2 * chunkLengthPrefix) + jsonLength + jsonPadding + binaryBuffer.byteLength + binPadding + imageByteLength + imagePadding;
+                const byteLength = headerLength + (2 * chunkLengthPrefix) + jsonLength + jsonPadding + binaryBuffer.byteLength + binPadding + imageByteLength + imagePadding;
 
-            //header
-            const headerBuffer = new ArrayBuffer(headerLength);
-            const headerBufferView = new DataView(headerBuffer);
-            headerBufferView.setUint32(0, 0x46546C67, true); //glTF
-            headerBufferView.setUint32(4, 2, true); // version
-            headerBufferView.setUint32(8, byteLength, true); // total bytes in file
+                //header
+                const headerBuffer = new ArrayBuffer(headerLength);
+                const headerBufferView = new DataView(headerBuffer);
+                headerBufferView.setUint32(0, 0x46546C67, true); //glTF
+                headerBufferView.setUint32(4, 2, true); // version
+                headerBufferView.setUint32(8, byteLength, true); // total bytes in file
 
-            //json chunk
-            const jsonChunkBuffer = new ArrayBuffer(chunkLengthPrefix + jsonLength + jsonPadding);
-            const jsonChunkBufferView = new DataView(jsonChunkBuffer);
-            jsonChunkBufferView.setUint32(0, jsonLength + jsonPadding, true);
-            jsonChunkBufferView.setUint32(4, 0x4E4F534A, true);
+                //json chunk
+                const jsonChunkBuffer = new ArrayBuffer(chunkLengthPrefix + jsonLength + jsonPadding);
+                const jsonChunkBufferView = new DataView(jsonChunkBuffer);
+                jsonChunkBufferView.setUint32(0, jsonLength + jsonPadding, true);
+                jsonChunkBufferView.setUint32(4, 0x4E4F534A, true);
 
-            //json chunk bytes
-            const jsonData = new Uint8Array(jsonChunkBuffer, chunkLengthPrefix);
-            for (let i = 0; i < jsonLength; ++i) {
-                jsonData[i] = jsonText.charCodeAt(i);
-            }
+                //json chunk bytes
+                const jsonData = new Uint8Array(jsonChunkBuffer, chunkLengthPrefix);
+                for (let i = 0; i < jsonLength; ++i) {
+                    jsonData[i] = jsonText.charCodeAt(i);
+                }
 
-            //json padding
-            const jsonPaddingView = new Uint8Array(jsonChunkBuffer, chunkLengthPrefix + jsonLength);
-            for (let i = 0; i < jsonPadding; ++i) {
-                jsonPaddingView[i] = 0x20;
-            }
+                //json padding
+                const jsonPaddingView = new Uint8Array(jsonChunkBuffer, chunkLengthPrefix + jsonLength);
+                for (let i = 0; i < jsonPadding; ++i) {
+                    jsonPaddingView[i] = 0x20;
+                }
 
-            //binary chunk
-            const binaryChunkBuffer = new ArrayBuffer(chunkLengthPrefix);
-            const binaryChunkBufferView = new DataView(binaryChunkBuffer);
-            binaryChunkBufferView.setUint32(0, binaryBuffer.byteLength + imageByteLength + imagePadding, true);
-            binaryChunkBufferView.setUint32(4, 0x004E4942, true);
+                //binary chunk
+                const binaryChunkBuffer = new ArrayBuffer(chunkLengthPrefix);
+                const binaryChunkBufferView = new DataView(binaryChunkBuffer);
+                binaryChunkBufferView.setUint32(0, binaryBuffer.byteLength + imageByteLength + imagePadding, true);
+                binaryChunkBufferView.setUint32(4, 0x004E4942, true);
 
-            // binary padding
-            const binPaddingBuffer = new ArrayBuffer(binPadding);
-            const binPaddingView = new Uint8Array(binPaddingBuffer);
-            for (let i = 0; i < binPadding; ++i) {
-                binPaddingView[i] = 0;
-            }
+                // binary padding
+                const binPaddingBuffer = new ArrayBuffer(binPadding);
+                const binPaddingView = new Uint8Array(binPaddingBuffer);
+                for (let i = 0; i < binPadding; ++i) {
+                    binPaddingView[i] = 0;
+                }
 
-            const imagePaddingBuffer = new ArrayBuffer(imagePadding);
-            const imagePaddingView = new Uint8Array(imagePaddingBuffer);
-            for (let i = 0; i < imagePadding; ++i) {
-                imagePaddingView[i] = 0;
-            }
+                const imagePaddingBuffer = new ArrayBuffer(imagePadding);
+                const imagePaddingView = new Uint8Array(imagePaddingBuffer);
+                for (let i = 0; i < imagePadding; ++i) {
+                    imagePaddingView[i] = 0;
+                }
 
-            const glbData = [headerBuffer, jsonChunkBuffer, binaryChunkBuffer, binaryBuffer];
+                const glbData = [headerBuffer, jsonChunkBuffer, binaryChunkBuffer, binaryBuffer];
 
-            // binary data
-            for (let key in this.imageData) {
-                glbData.push(this.imageData[key].data.buffer);
-            }
-            glbData.push(binPaddingBuffer);
+                // binary data
+                for (let key in this._imageData) {
+                    glbData.push(this._imageData[key].data.buffer);
+                }
+                glbData.push(binPaddingBuffer);
 
-            glbData.push(imagePaddingBuffer);
+                glbData.push(imagePaddingBuffer);
 
-            const glbFile = new Blob(glbData, { type: 'application/octet-stream' });
+                const glbFile = new Blob(glbData, { type: 'application/octet-stream' });
 
-            const container = new GLTFData();
-            container.glTFFiles[glbFileName] = glbFile;
+                const container = new GLTFData();
+                container.glTFFiles[glbFileName] = glbFile;
 
-            return container;
+                this._localEngine.dispose();
+
+                return container;
+            });
         }
 
         /**
@@ -728,7 +762,7 @@ module BABYLON.GLTF2 {
          */
         private setNodeTransformation(node: INode, babylonTransformNode: TransformNode): void {
             if (!babylonTransformNode.position.equalsToFloats(0, 0, 0)) {
-                node.translation = this.convertToRightHandedSystem ? _GLTFUtilities.GetRightHandedPositionVector3(babylonTransformNode.position).asArray() : babylonTransformNode.position.asArray();
+                node.translation = this._convertToRightHandedSystem ? _GLTFUtilities.GetRightHandedPositionVector3(babylonTransformNode.position).asArray() : babylonTransformNode.position.asArray();
             }
 
             if (!babylonTransformNode.scaling.equalsToFloats(1, 1, 1)) {
@@ -740,7 +774,7 @@ module BABYLON.GLTF2 {
                 rotationQuaternion.multiplyInPlace(babylonTransformNode.rotationQuaternion);
             }
             if (!(rotationQuaternion.x === 0 && rotationQuaternion.y === 0 && rotationQuaternion.z === 0 && rotationQuaternion.w === 1)) {
-                if (this.convertToRightHandedSystem) {
+                if (this._convertToRightHandedSystem) {
                     _GLTFUtilities.GetRightHandedQuaternionFromRef(rotationQuaternion);
 
                 }
@@ -775,7 +809,7 @@ module BABYLON.GLTF2 {
                 if (vertexData) {
                     const byteLength = vertexData.length * 4;
                     const bufferView = _GLTFUtilities.CreateBufferView(0, binaryWriter.getByteOffset(), byteLength, byteStride, kind + " - " + bufferMesh.name);
-                    this.bufferViews.push(bufferView);
+                    this._bufferViews.push(bufferView);
 
                     this.writeAttributeData(
                         kind,
@@ -792,7 +826,10 @@ module BABYLON.GLTF2 {
          * @param babylonMesh The BabylonJS mesh
          */
         private getMeshPrimitiveMode(babylonMesh: AbstractMesh): number {
-            return babylonMesh.material ? babylonMesh.material.fillMode : Material.TriangleFanDrawMode;
+            if (babylonMesh instanceof LinesMesh) {
+                return Material.LineListDrawMode;
+            }
+            return babylonMesh.material ? babylonMesh.material.fillMode : Material.TriangleFillMode;
         }
 
         /**
@@ -845,27 +882,27 @@ module BABYLON.GLTF2 {
         private setAttributeKind(meshPrimitive: IMeshPrimitive, attributeKind: string): void {
             switch (attributeKind) {
                 case VertexBuffer.PositionKind: {
-                    meshPrimitive.attributes.POSITION = this.accessors.length - 1;
+                    meshPrimitive.attributes.POSITION = this._accessors.length - 1;
                     break;
                 }
                 case VertexBuffer.NormalKind: {
-                    meshPrimitive.attributes.NORMAL = this.accessors.length - 1;
+                    meshPrimitive.attributes.NORMAL = this._accessors.length - 1;
                     break;
                 }
                 case VertexBuffer.ColorKind: {
-                    meshPrimitive.attributes.COLOR_0 = this.accessors.length - 1;
+                    meshPrimitive.attributes.COLOR_0 = this._accessors.length - 1;
                     break;
                 }
                 case VertexBuffer.TangentKind: {
-                    meshPrimitive.attributes.TANGENT = this.accessors.length - 1;
+                    meshPrimitive.attributes.TANGENT = this._accessors.length - 1;
                     break;
                 }
                 case VertexBuffer.UVKind: {
-                    meshPrimitive.attributes.TEXCOORD_0 = this.accessors.length - 1;
+                    meshPrimitive.attributes.TEXCOORD_0 = this._accessors.length - 1;
                     break;
                 }
                 case VertexBuffer.UV2Kind: {
-                    meshPrimitive.attributes.TEXCOORD_1 = this.accessors.length - 1;
+                    meshPrimitive.attributes.TEXCOORD_1 = this._accessors.length - 1;
                     break;
                 }
                 default: {
@@ -917,7 +954,7 @@ module BABYLON.GLTF2 {
                         }
 
                         this.createBufferViewKind(attributeKind, babylonTransformNode, binaryWriter, attribute.byteStride);
-                        attribute.bufferViewIndex = this.bufferViews.length - 1;
+                        attribute.bufferViewIndex = this._bufferViews.length - 1;
                         vertexAttributeBufferViews[attributeKind] = attribute.bufferViewIndex;
                     }
                 }
@@ -927,8 +964,8 @@ module BABYLON.GLTF2 {
                     if (indices) {
                         const byteLength = indices.length * 4;
                         bufferView = _GLTFUtilities.CreateBufferView(0, binaryWriter.getByteOffset(), byteLength, undefined, "Indices - " + bufferMesh.name);
-                        this.bufferViews.push(bufferView);
-                        indexBufferViewIndex = this.bufferViews.length - 1;
+                        this._bufferViews.push(bufferView);
+                        indexBufferViewIndex = this._bufferViews.length - 1;
 
                         for (let k = 0, length = indices.length; k < length; ++k) {
                             binaryWriter.setUInt32(indices[k]);
@@ -937,13 +974,49 @@ module BABYLON.GLTF2 {
                 }
 
                 if (bufferMesh.subMeshes) {
-                    uvCoordsPresent = false;
                     // go through all mesh primitives (submeshes)
                     for (const submesh of bufferMesh.subMeshes) {
+                        uvCoordsPresent = false;
+                        let babylonMaterial = submesh.getMaterial();
+
+                        let materialIndex: Nullable<number> = null;
+                        if (babylonMaterial) {
+                            if (bufferMesh instanceof LinesMesh) {
+                                // get the color from the lines mesh and set it in the material
+                                const material: IMaterial = {
+                                    name: bufferMesh.name + ' material'
+                                }
+                                if (!bufferMesh.color.equals(Color3.White()) || bufferMesh.alpha < 1) {
+                                    material.pbrMetallicRoughness = {
+                                        baseColorFactor: bufferMesh.color.asArray().concat([bufferMesh.alpha])
+                                    }
+                                }
+                                this._materials.push(material);
+                                materialIndex = this._materials.length - 1;
+                            }
+                            else if (babylonMaterial instanceof MultiMaterial) {
+                                babylonMaterial = babylonMaterial.subMaterials[submesh.materialIndex];
+                                if (babylonMaterial) {
+                                    materialIndex = this._materialMap[babylonMaterial.uniqueId];
+                                }
+                            }
+                            else {
+                                materialIndex = this._materialMap[babylonMaterial.uniqueId];
+                            }
+                        }
+
+                        let glTFMaterial: Nullable<IMaterial> = materialIndex != null ? this._materials[materialIndex] : null;
+
                         const meshPrimitive: IMeshPrimitive = { attributes: {} };
+                        this.setPrimitiveMode(meshPrimitive, primitiveMode);
 
                         for (const attribute of attributeData) {
                             const attributeKind = attribute.kind;
+                            if (attributeKind === VertexBuffer.UVKind || attributeKind === VertexBuffer.UV2Kind) {
+                                if (glTFMaterial && !this._glTFMaterialExporter._hasTexturesPresent(glTFMaterial)) {
+                                    continue;
+                                }
+                            }
                             let vertexData = bufferMesh.getVerticesData(attributeKind);
                             if (vertexData) {
                                 const vertexBuffer = this.getVertexBufferFromMesh(attributeKind, bufferMesh);
@@ -953,10 +1026,10 @@ module BABYLON.GLTF2 {
                                     if (bufferViewIndex != undefined) { // check to see if bufferviewindex has a numeric value assigned.
                                         minMax = { min: null, max: null };
                                         if (attributeKind == VertexBuffer.PositionKind) {
-                                            minMax = _GLTFUtilities.CalculateMinMaxPositions(vertexData, 0, vertexData.length / stride, this.convertToRightHandedSystem);
+                                            minMax = _GLTFUtilities.CalculateMinMaxPositions(vertexData, 0, vertexData.length / stride, this._convertToRightHandedSystem);
                                         }
                                         const accessor = _GLTFUtilities.CreateAccessor(bufferViewIndex, attributeKind + " - " + babylonTransformNode.name, attribute.accessorType, AccessorComponentType.FLOAT, vertexData.length / stride, 0, minMax.min, minMax.max);
-                                        this.accessors.push(accessor);
+                                        this._accessors.push(accessor);
                                         this.setAttributeKind(meshPrimitive, attributeKind);
                                         if (meshPrimitive.attributes.TEXCOORD_0 != null || meshPrimitive.attributes.TEXCOORD_1 != null) {
                                             uvCoordsPresent = true;
@@ -968,100 +1041,45 @@ module BABYLON.GLTF2 {
                         if (indexBufferViewIndex) {
                             // Create accessor
                             const accessor = _GLTFUtilities.CreateAccessor(indexBufferViewIndex, "indices - " + babylonTransformNode.name, AccessorType.SCALAR, AccessorComponentType.UNSIGNED_INT, submesh.indexCount, submesh.indexStart * 4, null, null);
-                            this.accessors.push(accessor);
-                            meshPrimitive.indices = this.accessors.length - 1;
+                            this._accessors.push(accessor);
+                            meshPrimitive.indices = this._accessors.length - 1;
                         }
-                        if (bufferMesh.material) {
-                            let materialIndex: Nullable<number> = null;
-                            if (bufferMesh.material instanceof StandardMaterial || bufferMesh.material instanceof PBRMetallicRoughnessMaterial || bufferMesh.material instanceof PBRMaterial) {
-                                materialIndex = babylonTransformNode.getScene().materials.indexOf(bufferMesh.material);
-                            }
-                            else if (bufferMesh.material instanceof MultiMaterial) {
-                                const babylonMultiMaterial = bufferMesh.material as MultiMaterial;
-                                const material = babylonMultiMaterial.subMaterials[submesh.materialIndex];
+                        if (materialIndex != null && Object.keys(meshPrimitive.attributes).length > 0) {
+                            let sideOrientation = this._babylonScene.materials[materialIndex].sideOrientation;
 
-                                if (material) {
-                                    materialIndex = babylonTransformNode.getScene().materials.indexOf(material);
+                            if (this._convertToRightHandedSystem && sideOrientation === Material.ClockWiseSideOrientation) {
+                                //Overwrite the indices to be counter-clockwise
+                                let byteOffset = indexBufferViewIndex != null ? this._bufferViews[indexBufferViewIndex].byteOffset : null;
+                                if (byteOffset == null) { byteOffset = 0; }
+                                let babylonIndices: Nullable<IndicesArray> = null;
+                                if (indexBufferViewIndex != null) {
+                                    babylonIndices = bufferMesh.getIndices();
                                 }
-                            }
-                            else {
-                                Tools.Warn("Material type " + bufferMesh.material.getClassName() + " for material " + bufferMesh.material.name + " is not yet implemented in glTF serializer.");
-                            }
-
-                            if (materialIndex != null && Object.keys(meshPrimitive.attributes).length > 0) {
-                                let sideOrientation = this.babylonScene.materials[materialIndex].sideOrientation;
-
-                                this.setPrimitiveMode(meshPrimitive, primitiveMode);
-
-                                if (this.convertToRightHandedSystem && sideOrientation === Material.ClockWiseSideOrientation) {
-                                    //Overwrite the indices to be counter-clockwise
-                                    let byteOffset = indexBufferViewIndex != null ? this.bufferViews[indexBufferViewIndex].byteOffset : null;
-                                    if (byteOffset == null) { byteOffset = 0; }
-                                    let babylonIndices: Nullable<IndicesArray> = null;
-                                    if (indexBufferViewIndex != null) {
-                                        babylonIndices = bufferMesh.getIndices();
-                                    }
-                                    if (babylonIndices) {
-                                        this.reorderIndicesBasedOnPrimitiveMode(submesh, primitiveMode, babylonIndices, byteOffset, binaryWriter);    
-                                    }
-                                    else {
-                                        for (let attribute of attributeData) {
-                                            let vertexData = bufferMesh.getVerticesData(attribute.kind);
-                                            if (vertexData) {
-                                                let byteOffset = this.bufferViews[vertexAttributeBufferViews[attribute.kind]].byteOffset;
-                                                if (!byteOffset) {
-                                                    byteOffset = 0
-                                                }
-                                                this.reorderVertexAttributeDataBasedOnPrimitiveMode(submesh, primitiveMode, sideOrientation, attribute.kind, vertexData, byteOffset, binaryWriter);
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (uvCoordsPresent) {
-                                    if (!_GLTFMaterial._HasTexturesPresent(this.materials[materialIndex])) {
-                                        delete meshPrimitive.attributes.TEXCOORD_0;
-                                        delete meshPrimitive.attributes.TEXCOORD_1;
-                                    }
-                                    meshPrimitive.material = materialIndex;
-                                }
-                                else {
-                                    if (_GLTFMaterial._HasTexturesPresent(this.materials[materialIndex])) {
-                                        const newMat = _GLTFMaterial._StripTexturesFromMaterial(this.materials[materialIndex]);
-                                        this.materials.push(newMat);
-                                        meshPrimitive.material = this.materials.length - 1;
-                                    }
-                                    else {
-                                        meshPrimitive.material = materialIndex;
-                                    }
-                                }
-                            }
-                        }
-                        else {
-                            const sideOrientation = this.babylonScene.defaultMaterial.sideOrientation;
-                            let byteOffset = indexBufferViewIndex != null ? this.bufferViews[indexBufferViewIndex].byteOffset : null;
-                            if (byteOffset == null) { byteOffset = 0; }
-                            let babylonIndices: Nullable<IndicesArray> = null;
-                            if (indexBufferViewIndex != null) {
-                                babylonIndices = bufferMesh.getIndices();
-                            }
-                            if (babylonIndices) {
-                                if (sideOrientation === Material.ClockWiseSideOrientation) {
+                                if (babylonIndices) {
                                     this.reorderIndicesBasedOnPrimitiveMode(submesh, primitiveMode, babylonIndices, byteOffset, binaryWriter);
                                 }
-                            }
-                            else {
-                                for (let attribute of attributeData) {
-                                    let vertexData = bufferMesh.getVerticesData(attribute.kind);
-                                    if (vertexData) {
-                                        let byteOffset = this.bufferViews[vertexAttributeBufferViews[attribute.kind]].byteOffset;
-                                        if (!byteOffset) {
-                                            byteOffset = 0
+                                else {
+                                    for (let attribute of attributeData) {
+                                        let vertexData = bufferMesh.getVerticesData(attribute.kind);
+                                        if (vertexData) {
+                                            let byteOffset = this._bufferViews[vertexAttributeBufferViews[attribute.kind]].byteOffset;
+                                            if (!byteOffset) {
+                                                byteOffset = 0
+                                            }
+                                            this.reorderVertexAttributeDataBasedOnPrimitiveMode(submesh, primitiveMode, sideOrientation, attribute.kind, vertexData, byteOffset, binaryWriter);
                                         }
-                                        this.reorderVertexAttributeDataBasedOnPrimitiveMode(submesh, primitiveMode, sideOrientation, attribute.kind, vertexData, byteOffset, binaryWriter);
                                     }
                                 }
                             }
+
+                            if (!uvCoordsPresent && this._glTFMaterialExporter._hasTexturesPresent(this._materials[materialIndex])) {
+                                const newMat = this._glTFMaterialExporter._stripTexturesFromMaterial(this._materials[materialIndex]);
+                                this._materials.push(newMat);
+                                materialIndex = this._materials.length - 1;
+                            }
+
+                            meshPrimitive.material = materialIndex;
+
                         }
                         mesh.primitives.push(meshPrimitive);
                     }
@@ -1075,36 +1093,35 @@ module BABYLON.GLTF2 {
          * @param babylonScene Babylon scene to get the mesh data from
          * @param binaryWriter Buffer to write binary data to
          */
-        private createScene(babylonScene: Scene, binaryWriter: _BinaryWriter): void {
-            if (this.setNodeTransformation.length) {
-                const scene: IScene = { nodes: [] };
-                let glTFNodeIndex: number;
-                let glTFNode: INode;
-                let directDescendents: Node[];
-                const nodes = [...babylonScene.transformNodes, ...babylonScene.meshes];
+        private createSceneAsync(babylonScene: Scene, binaryWriter: _BinaryWriter): Promise<void> {
+            const scene: IScene = { nodes: [] };
+            let glTFNodeIndex: number;
+            let glTFNode: INode;
+            let directDescendents: Node[];
+            const nodes = [...babylonScene.transformNodes, ...babylonScene.meshes];
 
-                _GLTFMaterial._ConvertMaterialsToGLTF(babylonScene.materials, ImageMimeType.PNG, this.images, this.textures, this.samplers, this.materials, this.imageData, true);
-                this.nodeMap = this.createNodeMapAndAnimations(babylonScene, nodes, this.shouldExportTransformNode, binaryWriter);
+            return this._glTFMaterialExporter._convertMaterialsToGLTFAsync(babylonScene.materials, ImageMimeType.PNG, true).then(() => {
+                this._nodeMap = this.createNodeMapAndAnimations(babylonScene, nodes, this._shouldExportTransformNode, binaryWriter);
 
-                this.totalByteLength = binaryWriter.getByteOffset();
+                this._totalByteLength = binaryWriter.getByteOffset();
 
 
                 // Build Hierarchy with the node map.
                 for (let babylonTransformNode of nodes) {
-                    glTFNodeIndex = this.nodeMap[babylonTransformNode.uniqueId];
+                    glTFNodeIndex = this._nodeMap[babylonTransformNode.uniqueId];
                     if (glTFNodeIndex != null) {
-                        glTFNode = this.nodes[glTFNodeIndex];
+                        glTFNode = this._nodes[glTFNodeIndex];
                         if (!babylonTransformNode.parent) {
-                            if (!this.shouldExportTransformNode(babylonTransformNode)) {
+                            if (!this._shouldExportTransformNode(babylonTransformNode)) {
                                 Tools.Log("Omitting " + babylonTransformNode.name + " from scene.");
                             }
                             else {
-                                if (this.convertToRightHandedSystem) {
-                                        if (glTFNode.translation) {
-                                            glTFNode.translation[2] *= -1;
-                                            glTFNode.translation[0] *= -1;
-                                        }
-                                        glTFNode.rotation = glTFNode.rotation ? Quaternion.FromArray([0, 1, 0, 0]).multiply(Quaternion.FromArray(glTFNode.rotation)).asArray() : (Quaternion.FromArray([0, 1, 0, 0])).asArray();
+                                if (this._convertToRightHandedSystem) {
+                                    if (glTFNode.translation) {
+                                        glTFNode.translation[2] *= -1;
+                                        glTFNode.translation[0] *= -1;
+                                    }
+                                    glTFNode.rotation = glTFNode.rotation ? Quaternion.FromArray([0, 1, 0, 0]).multiply(Quaternion.FromArray(glTFNode.rotation)).asArray() : (Quaternion.FromArray([0, 1, 0, 0])).asArray();
                                 }
 
                                 scene.nodes.push(glTFNodeIndex);
@@ -1115,22 +1132,24 @@ module BABYLON.GLTF2 {
                         if (!glTFNode.children && directDescendents && directDescendents.length) {
                             glTFNode.children = [];
                             for (let descendent of directDescendents) {
-                                if (this.nodeMap[descendent.uniqueId] != null) {
-                                    glTFNode.children.push(this.nodeMap[descendent.uniqueId]);
+                                if (this._nodeMap[descendent.uniqueId] != null) {
+                                    glTFNode.children.push(this._nodeMap[descendent.uniqueId]);
                                 }
                             }
                         }
                     }
                 };
                 if (scene.nodes.length) {
-                    this.scenes.push(scene);
+                    this._scenes.push(scene);
                 }
-            }
+            });
         }
 
         /**
          * Creates a mapping of Node unique id to node index and handles animations
          * @param babylonScene Babylon Scene
+         * @param nodes Babylon transform nodes
+         * @param shouldExportTransformNode Callback specifying if a transform node should be exported
          * @param binaryWriter Buffer to write binary data to
          * @returns Node mapping of unique id to index
          */
@@ -1149,12 +1168,12 @@ module BABYLON.GLTF2 {
                 if (shouldExportTransformNode(babylonTransformNode)) {
                     node = this.createNode(babylonTransformNode, binaryWriter);
 
-                    this.nodes.push(node);
-                    nodeIndex = this.nodes.length - 1;
+                    this._nodes.push(node);
+                    nodeIndex = this._nodes.length - 1;
                     nodeMap[babylonTransformNode.uniqueId] = nodeIndex;
 
                     if (!babylonScene.animationGroups.length && babylonTransformNode.animations.length) {
-                        _GLTFAnimation._CreateNodeAnimationFromTransformNodeAnimations(babylonTransformNode, runtimeGLTFAnimation, idleGLTFAnimations, nodeMap, this.nodes, binaryWriter, this.bufferViews, this.accessors, this.convertToRightHandedSystem, this.animationSampleRate);
+                        _GLTFAnimation._CreateNodeAnimationFromTransformNodeAnimations(babylonTransformNode, runtimeGLTFAnimation, idleGLTFAnimations, nodeMap, this._nodes, binaryWriter, this._bufferViews, this._accessors, this._convertToRightHandedSystem, this._animationSampleRate);
                     }
                 }
                 else {
@@ -1163,16 +1182,16 @@ module BABYLON.GLTF2 {
             };
 
             if (runtimeGLTFAnimation.channels.length && runtimeGLTFAnimation.samplers.length) {
-                this.animations.push(runtimeGLTFAnimation);
+                this._animations.push(runtimeGLTFAnimation);
             }
             idleGLTFAnimations.forEach((idleGLTFAnimation) => {
                 if (idleGLTFAnimation.channels.length && idleGLTFAnimation.samplers.length) {
-                    this.animations.push(idleGLTFAnimation);
+                    this._animations.push(idleGLTFAnimation);
                 }
             });
 
             if (babylonScene.animationGroups.length) {
-                _GLTFAnimation._CreateNodeAnimationFromAnimationGroups(babylonScene, this.animations, nodeMap, this.nodes, binaryWriter, this.bufferViews, this.accessors, this.convertToRightHandedSystem, this.animationSampleRate);
+                _GLTFAnimation._CreateNodeAnimationFromAnimationGroups(babylonScene, this._animations, nodeMap, this._nodes, binaryWriter, this._bufferViews, this._accessors, this._convertToRightHandedSystem, this._animationSampleRate);
             }
 
             return nodeMap;
@@ -1199,8 +1218,8 @@ module BABYLON.GLTF2 {
             this.setPrimitiveAttributes(mesh, babylonTransformNode, binaryWriter);
 
             if (mesh.primitives.length) {
-                this.meshes.push(mesh);
-                node.mesh = this.meshes.length - 1;
+                this._meshes.push(mesh);
+                node.mesh = this._meshes.length - 1;
             }
 
             return node;

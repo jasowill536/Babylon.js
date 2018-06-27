@@ -26,8 +26,10 @@
         private _engine: Engine;
         private _meshes: Mesh[];
         private _totalVertices = 0;
-        private _indices: IndicesArray;
-        private _vertexBuffers: { [key: string]: VertexBuffer; };
+        /** @hidden */
+        public _indices: IndicesArray;
+        /** @hidden */
+        public _vertexBuffers: { [key: string]: VertexBuffer; };
         private _isDisposed = false;
         private _extend: { minimum: Vector3, maximum: Vector3 };
         private _boundingBias: Vector2;
@@ -187,7 +189,7 @@
         }
 
         /**
-         * Affects all gemetry data in one call
+         * Affects all geometry data in one call
          * @param vertexData defines the geometry data
          * @param updatable defines if the geometry must be flagged as updatable (false as default)
          */
@@ -799,13 +801,13 @@
             if (this._positions)
                 return true;
 
-            this._positions = [];
-
             var data = this.getVerticesData(VertexBuffer.PositionKind);
 
-            if (!data) {
+            if (!data || data.length === 0) {
                 return false;
             }
+
+            this._positions = [];
 
             for (var index = 0; index < data.length; index += 3) {
                 this._positions.push(Vector3.FromArray(data, index));
@@ -1142,7 +1144,15 @@
 
                 if (binaryInfo.matricesIndicesAttrDesc && binaryInfo.matricesIndicesAttrDesc.count > 0) {
                     var matricesIndicesData = new Int32Array(parsedGeometry, binaryInfo.matricesIndicesAttrDesc.offset, binaryInfo.matricesIndicesAttrDesc.count);
-                    mesh.setVerticesData(VertexBuffer.MatricesIndicesKind, matricesIndicesData, false);
+                    var floatIndices = [];
+                    for (var i = 0; i < matricesIndicesData.length; i++) {
+                        var index = matricesIndicesData[i];
+                        floatIndices.push(index & 0x000000FF);
+                        floatIndices.push((index & 0x0000FF00) >> 8);
+                        floatIndices.push((index & 0x00FF0000) >> 16);
+                        floatIndices.push(index >> 24);
+                    }
+                    mesh.setVerticesData(VertexBuffer.MatricesIndicesKind, floatIndices, false);
                 }
 
                 if (binaryInfo.matricesWeightsAttrDesc && binaryInfo.matricesWeightsAttrDesc.count > 0) {

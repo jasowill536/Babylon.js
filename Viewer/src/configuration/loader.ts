@@ -1,8 +1,9 @@
 import { mapperManager } from './mappers';
 import { ViewerConfiguration } from './configuration';
 import { getConfigurationType } from './types';
+import { processConfigurationCompatibility } from './configurationCompatibility';
 
-import * as deepmerge from '../../assets/deepmerge.min.js';
+import { deepmerge } from '../helper/';
 import { Tools, IFileRequest } from 'babylonjs';
 
 /**
@@ -34,8 +35,6 @@ export class ConfigurationLoader {
         let loadedConfig: ViewerConfiguration = deepmerge({}, initConfig);
 
         let extendedConfiguration = getConfigurationType(loadedConfig.extends || "");
-
-        loadedConfig = deepmerge(extendedConfiguration, loadedConfig);
 
         if (loadedConfig.configuration) {
 
@@ -71,12 +70,15 @@ export class ConfigurationLoader {
                 }
             }).then((data: any) => {
                 let mapper = mapperManager.getMapper(mapperType);
-                let parsed = mapper.map(data);
-                let merged = deepmerge(loadedConfig, parsed);
+                let parsed = deepmerge(mapper.map(data), loadedConfig);
+                let merged = deepmerge(extendedConfiguration, parsed);
+                processConfigurationCompatibility(merged);
                 if (callback) callback(merged);
                 return merged;
             });
         } else {
+            loadedConfig = deepmerge(extendedConfiguration, loadedConfig);
+            processConfigurationCompatibility(loadedConfig);
             if (callback) callback(loadedConfig);
             return Promise.resolve(loadedConfig);
         }

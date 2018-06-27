@@ -633,8 +633,8 @@
 
         /** Define this parameter if you are using multiple cameras and you want to specify which one should be used for pointer position */
         public cameraToUseForPointers: Nullable<Camera> = null;
-        private _pointerX: number;
-        private _pointerY: number;
+        private _pointerX: number = 0;
+        private _pointerY: number = 0;
         private _unTranslatedPointerX: number;
         private _unTranslatedPointerY: number;
         private _startingPointerPosition = new Vector2(0, 0);
@@ -1245,7 +1245,9 @@
 
             this._renderingManager = new RenderingManager(this);
 
-            this.postProcessManager = new PostProcessManager(this);
+            if (PostProcessManager) {
+                this.postProcessManager = new PostProcessManager(this);
+            }
 
             if (OutlineRenderer) {
                 this._outlineRenderer = new OutlineRenderer(this);
@@ -1266,12 +1268,14 @@
             // Uniform Buffer
             this._createUbo();
 
-            // Default Image processing definition.
-            this._imageProcessingConfiguration = new ImageProcessingConfiguration();
+            // Default Image processing definition
+            if (ImageProcessingConfiguration) {
+                this._imageProcessingConfiguration = new ImageProcessingConfiguration();
+            }
         }
 
         /**
-         * Gets the debug layer associated with the scene
+         * Gets the debug layer (aka Inspector) associated with the scene
          * @see http://doc.babylonjs.com/features/playground_debuglayer
          */
         public get debugLayer(): DebugLayer {
@@ -1596,6 +1600,21 @@
         }
 
         // Pointers handling
+        private _pickSpriteButKeepRay(originalPointerInfo:Nullable<PickingInfo>, x: number, y: number, predicate?: (sprite: Sprite) => boolean, fastCheck?: boolean, camera?: Camera): Nullable<PickingInfo>{
+            var result = this.pickSprite(x,y,predicate,fastCheck,camera);
+            if(result){
+                result.ray = originalPointerInfo ? originalPointerInfo.ray : null;
+            }
+            return result;
+        }
+
+        private _setRayOnPointerInfo(pointerInfo:PointerInfo){
+            if(pointerInfo.pickInfo){
+                if(!pointerInfo.pickInfo.ray){
+                    pointerInfo.pickInfo.ray = this.createPickingRay(pointerInfo.event.offsetX, pointerInfo.event.offsetY, Matrix.Identity(), this.activeCamera);
+                }
+            }
+        }
 
         /**
          * Use this method to simulate a pointer move on a mesh
@@ -1606,6 +1625,10 @@
          */
         public simulatePointerMove(pickResult: PickingInfo, pointerEventInit?: PointerEventInit): Scene {
             let evt = new PointerEvent("pointermove", pointerEventInit);
+
+            if(this._checkPrePointerObservable(pickResult, evt, PointerEventTypes.POINTERMOVE)){
+                return this;
+            }
             return this._processPointerMove(pickResult, evt);
         }
 
@@ -1634,8 +1657,8 @@
             } else {
                 this.setPointerOverMesh(null);
                 // Sprites
-                pickResult = this.pickSprite(this._unTranslatedPointerX, this._unTranslatedPointerY, this._spritePredicate, false, this.cameraToUseForPointers || undefined);
-
+                pickResult = this._pickSpriteButKeepRay(pickResult, this._unTranslatedPointerX, this._unTranslatedPointerY, this._spritePredicate, false, this.cameraToUseForPointers || undefined);
+                
                 if (pickResult && pickResult.hit && pickResult.pickedSprite) {
                     this.setPointerOverSprite(pickResult.pickedSprite);
                     if (this._pointerOverSprite && this._pointerOverSprite.actionManager && this._pointerOverSprite.actionManager.hoverCursor) {
@@ -1659,11 +1682,25 @@
 
                 if (this.onPointerObservable.hasObservers()) {
                     let pi = new PointerInfo(type, evt, pickResult);
+                    this._setRayOnPointerInfo(pi);
                     this.onPointerObservable.notifyObservers(pi, type);
                 }
             }
 
             return this;
+        }
+
+        private _checkPrePointerObservable(pickResult: Nullable<PickingInfo>, evt: PointerEvent, type: number){
+            let pi = new PointerInfoPre(type, evt, this._unTranslatedPointerX, this._unTranslatedPointerY);
+            if(pickResult){
+                pi.ray = pickResult.ray;
+            }
+            this.onPrePointerObservable.notifyObservers(pi, type);
+            if (pi.skipOnPointerObservable) {
+                return true;
+            }else{
+                return false;
+            }
         }
 
         /**
@@ -1675,7 +1712,11 @@
          */
         public simulatePointerDown(pickResult: PickingInfo, pointerEventInit?: PointerEventInit): Scene {
             let evt = new PointerEvent("pointerdown", pointerEventInit);
-
+            
+            if(this._checkPrePointerObservable(pickResult, evt, PointerEventTypes.POINTERDOWN)){
+                return this;
+            }
+            
             return this._processPointerDown(pickResult, evt);
         }
 
@@ -1728,6 +1769,7 @@
 
                 if (this.onPointerObservable.hasObservers()) {
                     let pi = new PointerInfo(type, evt, pickResult);
+                    this._setRayOnPointerInfo(pi);
                     this.onPointerObservable.notifyObservers(pi, type);
                 }
             }
@@ -1748,6 +1790,10 @@
             clickInfo.singleClick = true;
             clickInfo.ignore = true;
 
+            if(this._checkPrePointerObservable(pickResult, evt, PointerEventTypes.POINTERUP)){
+                return this;
+            }
+
             return this._processPointerUp(pickResult, evt, clickInfo);
         }
 
@@ -1761,6 +1807,7 @@
                     if (clickInfo.singleClick && !clickInfo.ignore && this.onPointerObservable.hasObservers()) {
                         let type = PointerEventTypes.POINTERPICK;
                         let pi = new PointerInfo(type, evt, pickResult);
+                        this._setRayOnPointerInfo(pi);
                         this.onPointerObservable.notifyObservers(pi, type);
                     }
                 }
@@ -1790,17 +1837,20 @@
                         if (clickInfo.singleClick && this.onPointerObservable.hasSpecificMask(PointerEventTypes.POINTERTAP)) {
                             let type = PointerEventTypes.POINTERTAP;
                             let pi = new PointerInfo(type, evt, pickResult);
+                            this._setRayOnPointerInfo(pi);
                             this.onPointerObservable.notifyObservers(pi, type);
                         }
                         if (clickInfo.doubleClick && this.onPointerObservable.hasSpecificMask(PointerEventTypes.POINTERDOUBLETAP)) {
                             let type = PointerEventTypes.POINTERDOUBLETAP;
                             let pi = new PointerInfo(type, evt, pickResult);
+                            this._setRayOnPointerInfo(pi);
                             this.onPointerObservable.notifyObservers(pi, type);
                         }
                     }
                 }
                 else {
                     let pi = new PointerInfo(type, evt, pickResult);
+                    this._setRayOnPointerInfo(pi);
                     this.onPointerObservable.notifyObservers(pi, type);
                 }
             }
@@ -1970,13 +2020,8 @@
                 this._updatePointerPosition(evt);
 
                 // PreObservable support
-                if (this.onPrePointerObservable.hasObservers() && !this._pointerCaptures[evt.pointerId]) {
-                    let type = evt.type === "mousewheel" || evt.type === "DOMMouseScroll" ? PointerEventTypes.POINTERWHEEL : PointerEventTypes.POINTERMOVE;
-                    let pi = new PointerInfoPre(type, evt, this._unTranslatedPointerX, this._unTranslatedPointerY);
-                    this.onPrePointerObservable.notifyObservers(pi, type);
-                    if (pi.skipOnPointerObservable) {
-                        return;
-                    }
+                if(this._checkPrePointerObservable(null, evt, evt.type === "mousewheel" || evt.type === "DOMMouseScroll" ? PointerEventTypes.POINTERWHEEL : PointerEventTypes.POINTERMOVE)){
+                    return;
                 }
 
                 if (!this.cameraToUseForPointers && !this.activeCamera) {
@@ -2006,13 +2051,8 @@
                 }
 
                 // PreObservable support
-                if (this.onPrePointerObservable.hasObservers()) {
-                    let type = PointerEventTypes.POINTERDOWN;
-                    let pi = new PointerInfoPre(type, evt, this._unTranslatedPointerX, this._unTranslatedPointerY);
-                    this.onPrePointerObservable.notifyObservers(pi, type);
-                    if (pi.skipOnPointerObservable) {
-                        return;
-                    }
+                if(this._checkPrePointerObservable(null, evt, PointerEventTypes.POINTERDOWN)){
+                    return;
                 }
 
                 if (!this.cameraToUseForPointers && !this.activeCamera) {
@@ -2079,28 +2119,19 @@
                         if (!clickInfo.ignore) {
                             if (!clickInfo.hasSwiped) {
                                 if (clickInfo.singleClick && this.onPrePointerObservable.hasSpecificMask(PointerEventTypes.POINTERTAP)) {
-                                    let type = PointerEventTypes.POINTERTAP;
-                                    let pi = new PointerInfoPre(type, evt, this._unTranslatedPointerX, this._unTranslatedPointerY);
-                                    this.onPrePointerObservable.notifyObservers(pi, type);
-                                    if (pi.skipOnPointerObservable) {
+                                    if(this._checkPrePointerObservable(null, evt, PointerEventTypes.POINTERTAP)){
                                         return;
                                     }
                                 }
                                 if (clickInfo.doubleClick && this.onPrePointerObservable.hasSpecificMask(PointerEventTypes.POINTERDOUBLETAP)) {
-                                    let type = PointerEventTypes.POINTERDOUBLETAP;
-                                    let pi = new PointerInfoPre(type, evt, this._unTranslatedPointerX, this._unTranslatedPointerY);
-                                    this.onPrePointerObservable.notifyObservers(pi, type);
-                                    if (pi.skipOnPointerObservable) {
+                                    if(this._checkPrePointerObservable(null, evt, PointerEventTypes.POINTERDOUBLETAP)){
                                         return;
                                     }
                                 }
                             }
                         }
                         else {
-                            let type = PointerEventTypes.POINTERUP;
-                            let pi = new PointerInfoPre(type, evt, this._unTranslatedPointerX, this._unTranslatedPointerY);
-                            this.onPrePointerObservable.notifyObservers(pi, type);
-                            if (pi.skipOnPointerObservable) {
+                            if(this._checkPrePointerObservable(null, evt, PointerEventTypes.POINTERUP)){
                                 return;
                             }
                         }
@@ -2596,7 +2627,9 @@
          */
         public beginDirectHierarchyAnimation(target: Node, directDescendantsOnly: boolean, animations: Animation[], from: number, to: number, loop?: boolean, speedRatio?: number, onAnimationEnd?: () => void): Animatable[] {
             let children = target.getDescendants(directDescendantsOnly);
+
             let result = [];
+            result.push(this.beginDirectAnimation(target, animations, from, to, loop, speedRatio, onAnimationEnd));
             for (var child of children) {
                 result.push(this.beginDirectAnimation(child, animations, from, to, loop, speedRatio, onAnimationEnd));
             }
@@ -3009,8 +3042,9 @@
         /**
          * Add a mesh to the list of scene's meshes
          * @param newMesh defines the mesh to add
+         * @param recursive if all child meshes should also be added to the scene
          */
-        public addMesh(newMesh: AbstractMesh) {
+        public addMesh(newMesh: AbstractMesh, recursive = false) {
             this.meshes.push(newMesh);
 
             //notify the collision coordinator
@@ -3020,6 +3054,12 @@
             newMesh._resyncLightSources();
 
             this.onNewMeshAddedObservable.notifyObservers(newMesh);
+
+            if(recursive){
+                newMesh.getChildMeshes().forEach((m)=>{
+                    this.addMesh(m);
+                })
+            }
         }
 
       /**
@@ -4437,8 +4477,6 @@
             if (!this.activeCamera)
                 throw new Error("Active camera not set");
 
-            Tools.StartPerformanceCounter("Rendering camera " + this.activeCamera.name);
-
             // Viewport
             engine.setViewport(this.activeCamera.viewport);
 
@@ -4495,7 +4533,7 @@
                 needsRestoreFrameBuffer = true; // Restore back buffer
             }
 
-            // Render EffecttLayer Texture
+            // Render EffectLayer Texture
             var stencilState = this._engine.getStencilBuffer();
             var renderEffects = false;
             var needStencil = false;
@@ -4532,7 +4570,9 @@
             this.onAfterRenderTargetsRenderObservable.notifyObservers(this);
 
             // Prepare Frame
-            this.postProcessManager._prepareFrame();
+            if (this.postProcessManager) {
+                this.postProcessManager._prepareFrame();
+            }
 
             // Backgrounds
             var layerIndex;
@@ -4605,7 +4645,9 @@
             }
             
             // Finalize frame
-            this.postProcessManager._finalizeFrame(camera.isIntermediate);
+            if (this.postProcessManager) {
+                this.postProcessManager._finalizeFrame(camera.isIntermediate);
+            }
 
             // Reset some special arrays
             this._renderTargets.reset();
@@ -4613,8 +4655,6 @@
             this._alternateRendering = false;
 
             this.onAfterCameraRenderObservable.notifyObservers(this.activeCamera);
-
-            Tools.EndPerformanceCounter("Rendering camera " + this.activeCamera.name);
         }
 
         private _processSubCameras(camera: Camera): void {
@@ -4680,8 +4720,9 @@
 
         /** 
          * Render the scene
+         * @param updateCameras defines a boolean indicating if cameras must update according to their inputs (true by default)
          */
-        public render(): void {
+        public render(updateCameras = true): void {
             if (this.isDisposed) {
                 return;
             }
@@ -4769,23 +4810,25 @@
             }
 
             // Update Cameras
-            if (this.activeCameras.length > 0) {
-                for (var cameraIndex = 0; cameraIndex < this.activeCameras.length; cameraIndex++) {
-                    let camera = this.activeCameras[cameraIndex];
-                    camera.update();
-                    if (camera.cameraRigMode !== Camera.RIG_MODE_NONE) {
-                        // rig cameras
-                        for (var index = 0; index < camera._rigCameras.length; index++) {
-                            camera._rigCameras[index].update();
+            if (updateCameras) {
+                if (this.activeCameras.length > 0) {
+                    for (var cameraIndex = 0; cameraIndex < this.activeCameras.length; cameraIndex++) {
+                        let camera = this.activeCameras[cameraIndex];
+                        camera.update();
+                        if (camera.cameraRigMode !== Camera.RIG_MODE_NONE) {
+                            // rig cameras
+                            for (var index = 0; index < camera._rigCameras.length; index++) {
+                                camera._rigCameras[index].update();
+                            }
                         }
                     }
-                }
-            } else if (this.activeCamera) {
-                this.activeCamera.update();
-                if (this.activeCamera.cameraRigMode !== Camera.RIG_MODE_NONE) {
-                    // rig cameras
-                    for (var index = 0; index < this.activeCamera._rigCameras.length; index++) {
-                        this.activeCamera._rigCameras[index].update();
+                } else if (this.activeCamera) {
+                    this.activeCamera.update();
+                    if (this.activeCamera.cameraRigMode !== Camera.RIG_MODE_NONE) {
+                        // rig cameras
+                        for (var index = 0; index < this.activeCamera._rigCameras.length; index++) {
+                            this.activeCamera._rigCameras[index].update();
+                        }
                     }
                 }
             }
@@ -5366,6 +5409,43 @@
             }
         }
 
+        /**
+         * Call this function to reduce memory footprint of the scene.
+         * Vertex buffers will not store CPU data anymore (this will prevent picking, collisions or physics to work correctly)
+         */
+        public clearCachedVertexData(): void {
+            for (var meshIndex = 0; meshIndex < this.meshes.length; meshIndex++) {
+                var mesh = this.meshes[meshIndex];
+                var geometry = (<Mesh>mesh).geometry;
+
+                if (geometry) {
+                    geometry._indices = [];
+    
+                    for (var vbName in geometry._vertexBuffers) {
+                        if (!geometry._vertexBuffers.hasOwnProperty(vbName)) {
+                            continue;
+                        }
+                        geometry._vertexBuffers[vbName]._buffer._data = null;
+                    }
+                }
+            }
+        }
+
+        /**
+         * This function will remove the local cached buffer data from texture.
+         * It will save memory but will prevent the texture from being rebuilt
+         */
+        public cleanCachedTextureBuffer(): void {
+            for (var baseTexture of this.textures) {
+                let buffer = (<Texture>baseTexture)._buffer;
+
+                if (buffer) {
+                    (<Texture>baseTexture)._buffer = null;
+                }
+            }
+        }
+        
+
         // Octrees
 
         /**
@@ -5640,11 +5720,14 @@
             if (!PickingInfo) {
                 return null;
             }
-
-            return this._internalPick(world => {
+            var result = this._internalPick(world => {
                 this.createPickingRayToRef(x, y, world, this._tempPickingRay!, camera || null);
                 return this._tempPickingRay!;
             }, predicate, fastCheck);
+            if(result){
+                result.ray = this.createPickingRay(x, y, Matrix.Identity(), camera || null);
+            }
+            return result;
         }
 
         /** Launch a ray to try to pick a sprite in the scene
@@ -5669,8 +5752,8 @@
          * @param fastCheck Launch a fast check only using the bounding boxes. Can be set to null
          * @returns a PickingInfo
          */
-        public pickWithRay(ray: Ray, predicate: (mesh: AbstractMesh) => boolean, fastCheck?: boolean): Nullable<PickingInfo> {
-            return this._internalPick(world => {
+        public pickWithRay(ray: Ray, predicate?: (mesh: AbstractMesh) => boolean, fastCheck?: boolean): Nullable<PickingInfo> {
+            var result = this._internalPick(world => {
                 if (!this._pickWithRayInverseMatrix) {
                     this._pickWithRayInverseMatrix = Matrix.Identity();
                 }
@@ -5683,6 +5766,10 @@
                 Ray.TransformToRef(ray, this._pickWithRayInverseMatrix, this._cachedRayForTransform);
                 return this._cachedRayForTransform;
             }, predicate, fastCheck);
+            if(result){
+                result.ray = ray;
+            }
+            return result;
         }
 
         /**

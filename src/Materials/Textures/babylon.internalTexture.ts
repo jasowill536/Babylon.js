@@ -140,7 +140,7 @@ module BABYLON {
         /** @hidden */
         public _dataSource = InternalTexture.DATASOURCE_UNKNOWN;
         /** @hidden */
-        public _buffer: Nullable<ArrayBuffer | HTMLImageElement>;
+        public _buffer: Nullable<string | ArrayBuffer | HTMLImageElement | Blob>;
         /** @hidden */
         public _bufferView: Nullable<ArrayBufferView>;
         /** @hidden */
@@ -188,9 +188,9 @@ module BABYLON {
         /** @hidden */
         public _sphericalPolynomial: Nullable<SphericalPolynomial>;
         /** @hidden */
-        public _lodGenerationScale: number;
+        public _lodGenerationScale: number = 0;
         /** @hidden */
-        public _lodGenerationOffset: number;
+        public _lodGenerationOffset: number = 0;
 
         // The following three fields helps sharing generated fixed LODs for texture filtering
         // In environment not supporting the textureLOD extension like EDGE. They are for internal use only.
@@ -201,12 +201,23 @@ module BABYLON {
         public _lodTextureMid: BaseTexture;
         /** @hidden */
         public _lodTextureLow: BaseTexture;
+        /** @hidden */
+        public _isRGBD: boolean = false;
 
         /** @hidden */
         public _webGLTexture: Nullable<WebGLTexture>;
         /** @hidden */
         public _references: number = 1;
+
         private _engine: Engine;
+
+        /**
+         * Gets the Engine the texture belongs to.
+         * @returns The babylon engine
+         */
+        public getEngine(): Engine {
+            return this._engine;
+        }
 
         /**
          * Gets the data source type of the texture (can be one of the BABYLON.InternalTexture.DATASOURCE_XXXX)
@@ -353,11 +364,12 @@ module BABYLON {
 
                         this.isReady = true;
                     }, null, this.format, this._extension);
+                    proxy._sphericalPolynomial = this._sphericalPolynomial;
                     return;
             }
         }
 
-        private _swapAndDie(target: InternalTexture): void {
+        public _swapAndDie(target: InternalTexture): void {
             target._webGLTexture = this._webGLTexture;
 
             if (this._framebuffer) {

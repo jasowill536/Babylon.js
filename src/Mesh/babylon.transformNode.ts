@@ -25,6 +25,18 @@ module BABYLON {
         protected _isDirty = false;
         private _transformToBoneReferal: Nullable<TransformNode>;
 
+        /**
+        * Set the billboard mode. Default is 0.
+        *
+        * | Value | Type | Description |
+        * | --- | --- | --- |
+        * | 0 | BILLBOARDMODE_NONE |  |
+        * | 1 | BILLBOARDMODE_X |  |
+        * | 2 | BILLBOARDMODE_Y |  |
+        * | 4 | BILLBOARDMODE_Z |  |
+        * | 7 | BILLBOARDMODE_ALL |  |
+        *
+        */
         @serialize()
         public billboardMode = TransformNode.BILLBOARDMODE_NONE;
 
@@ -33,6 +45,13 @@ module BABYLON {
 
         @serialize()
         public infiniteDistance = false;
+
+        /**
+         * Gets or sets a boolean indicating that non uniform scaling (when at least one component is different from others) should be ignored.
+         * By default the system will update normals to compensate
+         */
+        @serialize()
+        public ignoreNonUniformScaling = false;        
 
         @serializeAsVector3()
         public position = Vector3.Zero();
@@ -517,8 +536,10 @@ module BABYLON {
          * Returns the TransformNode.
          */
         public setParent(node: Nullable<Node>): TransformNode {
-
-            if (node === null) {
+            if (!node && !this.parent) {
+                return this;
+            }
+            if (!node) {
                 var rotation = Tmp.Quaternion[0];
                 var position = Tmp.Vector3[0];
                 var scale = Tmp.Vector3[1];
@@ -585,7 +606,7 @@ module BABYLON {
                 return false;
             }
 
-            this._nonUniformScaling = true;
+            this._nonUniformScaling = value;
             return true;
         }
 
@@ -872,11 +893,15 @@ module BABYLON {
             }
 
             // Normal matrix
-            if (this.scaling.isNonUniform) {
-                this._updateNonUniformScalingState(true);
-            } else if (this.parent && (<TransformNode>this.parent)._nonUniformScaling) {
-                this._updateNonUniformScalingState((<TransformNode>this.parent)._nonUniformScaling);
-            } else {
+            if (!this.ignoreNonUniformScaling) {
+                if (this.scaling.isNonUniform) {
+                    this._updateNonUniformScalingState(true);
+                } else if (this.parent && (<TransformNode>this.parent)._nonUniformScaling) {
+                    this._updateNonUniformScalingState((<TransformNode>this.parent)._nonUniformScaling);
+                } else {
+                    this._updateNonUniformScalingState(false);
+                }
+            }else {
                 this._updateNonUniformScalingState(false);
             }
 

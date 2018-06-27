@@ -315,6 +315,8 @@
                 onLoad();
             }
 
+            this._internalTexturesCache.push(texture);
+
             return texture;
         }
 
@@ -352,6 +354,9 @@
             texture.type = fullOptions.type;
             texture._generateDepthBuffer = fullOptions.generateDepthBuffer;
             texture._generateStencilBuffer = fullOptions.generateStencilBuffer ? true : false;
+
+            this._internalTexturesCache.push(texture);
+
             return texture;
         }
 
@@ -392,6 +397,10 @@
             return vbo;
         }
 
+        public updateDynamicTexture(texture: Nullable<InternalTexture>, canvas: HTMLCanvasElement, invertY: boolean, premulAlpha: boolean = false, format?: number): void {
+
+        }
+
         public updateDynamicIndexBuffer(indexBuffer: WebGLBuffer, indices: IndicesArray, offset: number = 0): void {
         }
 
@@ -405,10 +414,12 @@
         public updateDynamicVertexBuffer(vertexBuffer: WebGLBuffer, vertices: FloatArray, byteOffset?: number, byteLength?: number): void {
         }
 
-        protected _bindTextureDirectly(target: number, texture: InternalTexture): void {
+        protected _bindTextureDirectly(target: number, texture: InternalTexture): boolean {
             if (this._boundTexturesCache[this._activeChannel] !== texture) {
                 this._boundTexturesCache[this._activeChannel] = texture;
+                return true;
             }
+            return false;
         }
 
         public _bindTexture(channel: number, texture: InternalTexture): void {

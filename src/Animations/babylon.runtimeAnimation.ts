@@ -399,8 +399,16 @@
                 this._stopped = true;
                 return false;
             }
-            var returnValue = true;
+
             let keys = this._animation.getKeys();
+
+            // Return immediately if there is only one key frame.
+            if (keys.length === 1) {
+                this.setValue(keys[0].value, weight);
+                return !loop;
+            }
+
+            var returnValue = true;
 
             // Adding a start key at frame 0 if missing
             if (keys[0].frame !== 0) {
@@ -424,7 +432,7 @@
                     to++;
                 }
             }
-            
+
             // Compute ratio
             var range = to - from;
             var offsetValue;
@@ -435,7 +443,7 @@
             this._previousDelay = delay;
             this._previousRatio = ratio;
 
-            if (((to > from && ratio > range) || (from > to && ratio < range)) && !loop) { // If we are out of range and not looping get back to caller
+            if (((to > from && ratio >= range) || (from > to && ratio <= range)) && !loop) { // If we are out of range and not looping get back to caller
                 returnValue = false;
                 highLimitValue = this._animation._getKeyValue(keys[keys.length - 1].value);
             } else {

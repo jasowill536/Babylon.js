@@ -471,7 +471,9 @@ declare module INSPECTOR {
         private _property;
         /** The obj this property refers to */
         private _obj;
-        constructor(prop: string, obj: any);
+        /** The obj parent  */
+        private _parentObj;
+        constructor(prop: string, obj: any, parentObj?: any);
         readonly name: string;
         value: any;
         readonly type: string;
@@ -1011,8 +1013,11 @@ declare module INSPECTOR {
         private _engine;
         private _glInfo;
         private _updateLoopHandler;
+        private _refreshRateCounter;
+        private refreshRate;
         private _sceneInstrumentation;
         private _engineInstrumentation;
+        private _inputElement;
         private _connectToInstrumentation();
         constructor(tabbar: TabBar, insp: Inspector);
         private _createStatLabel(content, parent);
@@ -1025,12 +1030,38 @@ declare module INSPECTOR {
 
 
 
+
+declare function Split(elements: HTMLElement[], options: any): any;
 declare module INSPECTOR {
     class GLTFTab extends Tab {
+        private static _LoaderDefaults;
+        private _inspector;
+        private _actions;
+        private _detailsPanel;
+        private _split;
+        static readonly IsSupported: boolean;
+        /** @hidden */
+        static _Initialize(): void;
         constructor(tabbar: TabBar, inspector: Inspector);
         dispose(): void;
-        private _addExport(inspector, actions);
+        private _addImport();
+        private static _EnumeratePublic(obj, callback);
+        private _getLoaderDefaultsAsync();
+        private _openDetailsPanel();
+        private _closeDetailsPanel();
+        private _showLoaderDefaults(defaults);
+        private _showLoaderExtensionDefaults(defaults);
+        private _addExport();
         private static _IsSkyBox(transformNode);
+    }
+}
+
+declare module INSPECTOR {
+    class ToolsTab extends Tab {
+        private _inspector;
+        private _scene;
+        constructor(tabbar: TabBar, insp: Inspector);
+        dispose(): void;
     }
 }
 
@@ -1088,7 +1119,7 @@ declare module INSPECTOR {
     abstract class AbstractTool {
         private _elem;
         protected _inspector: Inspector;
-        constructor(icon: string, parent: HTMLElement, inspector: Inspector, tooltip: string);
+        constructor(iconSet: string, icon: string, parent: HTMLElement, inspector: Inspector, tooltip: string);
         toHtml(): HTMLElement;
         /**
          * Returns the total width in pixel of this tool, 0 by default

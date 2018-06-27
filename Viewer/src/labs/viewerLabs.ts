@@ -1,8 +1,6 @@
 import { PBREnvironment, EnvironmentDeserializer } from "./environmentSerializer";
-import { SceneManager } from '../viewer/sceneManager';
 
-import { Tools, Quaternion } from 'babylonjs';
-import { ViewerConfiguration } from "../configuration/configuration";
+import { Tools, Quaternion, ShadowLight, Vector3, Axis, Matrix, SphericalPolynomial, Tmp, Scene } from 'babylonjs';
 import { TextureUtils } from "./texture";
 
 /**
@@ -12,21 +10,21 @@ import { TextureUtils } from "./texture";
  */
 export class ViewerLabs {
 
-    constructor(private _sceneManager: SceneManager) { }
+    constructor(private _scene: Scene) { }
 
     public assetsRootURL: string;
     public environment: PBREnvironment = {
         //irradiance
         irradiancePolynomialCoefficients: {
-            x: new BABYLON.Vector3(0, 0, 0),
-            y: new BABYLON.Vector3(0, 0, 0),
-            z: new BABYLON.Vector3(0, 0, 0),
-            xx: new BABYLON.Vector3(0, 0, 0),
-            yy: new BABYLON.Vector3(0, 0, 0),
-            zz: new BABYLON.Vector3(0, 0, 0),
-            yz: new BABYLON.Vector3(0, 0, 0),
-            zx: new BABYLON.Vector3(0, 0, 0),
-            xy: new BABYLON.Vector3(0, 0, 0)
+            x: new Vector3(0, 0, 0),
+            y: new Vector3(0, 0, 0),
+            z: new Vector3(0, 0, 0),
+            xx: new Vector3(0, 0, 0),
+            yy: new Vector3(0, 0, 0),
+            zz: new Vector3(0, 0, 0),
+            yz: new Vector3(0, 0, 0),
+            zx: new Vector3(0, 0, 0),
+            xy: new Vector3(0, 0, 0)
         },
 
         textureIntensityScale: 1.0
@@ -63,7 +61,7 @@ export class ViewerLabs {
             if (onSuccess) onSuccess(this.environment);
         } else if (typeof data === 'string') {
             let url = this.getAssetUrl(data);
-            this._sceneManager.scene._loadFile(
+            this._scene._loadFile(
                 url,
                 (arrayBuffer: ArrayBuffer) => {
                     this.environment = EnvironmentDeserializer.Parse(arrayBuffer);
@@ -93,20 +91,20 @@ export class ViewerLabs {
         if (!this.environment) return;
 
         //set orientation
-        let rotatquatRotationionY = Quaternion.RotationAxis(BABYLON.Axis.Y, rotationY || 0);
+        let rotatquatRotationionY = Quaternion.RotationAxis(Axis.Y, rotationY || 0);
 
         // Add env texture to the scene.
         if (this.environment.specularTexture) {
             // IE crashes when disposing the old texture and setting a new one
-            if (!this._sceneManager.scene.environmentTexture) {
-                this._sceneManager.scene.environmentTexture = TextureUtils.GetBabylonCubeTexture(this._sceneManager.scene, this.environment.specularTexture, false, true);
+            if (!this._scene.environmentTexture) {
+                this._scene.environmentTexture = TextureUtils.GetBabylonCubeTexture(this._scene, this.environment.specularTexture, false, true);
             }
-            if (this._sceneManager.scene.environmentTexture) {
-                this._sceneManager.scene.environmentTexture.level = this.environment.textureIntensityScale;
-                this._sceneManager.scene.environmentTexture.invertZ = true;
-                this._sceneManager.scene.environmentTexture.lodLevelInAlpha = true;
+            if (this._scene.environmentTexture) {
+                this._scene.environmentTexture.level = this.environment.textureIntensityScale;
+                this._scene.environmentTexture.invertZ = true;
+                this._scene.environmentTexture.lodLevelInAlpha = true;
 
-                var poly = this._sceneManager.scene.environmentTexture.sphericalPolynomial || new BABYLON.SphericalPolynomial();
+                var poly = this._scene.environmentTexture.sphericalPolynomial || new SphericalPolynomial();
                 poly.x = this.environment.irradiancePolynomialCoefficients.x;
                 poly.y = this.environment.irradiancePolynomialCoefficients.y;
                 poly.z = this.environment.irradiancePolynomialCoefficients.z;
@@ -116,10 +114,10 @@ export class ViewerLabs {
                 poly.yz = this.environment.irradiancePolynomialCoefficients.yz;
                 poly.zx = this.environment.irradiancePolynomialCoefficients.zx;
                 poly.zz = this.environment.irradiancePolynomialCoefficients.zz;
-                this._sceneManager.scene.environmentTexture.sphericalPolynomial = poly;
+                this._scene.environmentTexture.sphericalPolynomial = poly;
 
                 //set orientation
-                BABYLON.Matrix.FromQuaternionToRef(rotatquatRotationionY, this._sceneManager.scene.environmentTexture.getReflectionTextureMatrix());
+                Matrix.FromQuaternionToRef(rotatquatRotationionY, this._scene.environmentTexture.getReflectionTextureMatrix());
             }
         }
     }
@@ -141,6 +139,22 @@ export class ViewerLabs {
         }
 
         return returnUrl;
+    }
+
+    public rotateShadowLight(shadowLight: ShadowLight, amount: number, point = Vector3.Zero(), axis = Axis.Y, target = Vector3.Zero()) {
+        axis.normalize();
+        point.subtractToRef(shadowLight.position, Tmp.Vector3[0]);
+        Matrix.TranslationToRef(Tmp.Vector3[0].x, Tmp.Vector3[0].y, Tmp.Vector3[0].z, Tmp.Matrix[0]);
+        Tmp.Matrix[0].invertToRef(Tmp.Matrix[2]);
+        Matrix.RotationAxisToRef(axis, amount, Tmp.Matrix[1]);
+        Tmp.Matrix[2].multiplyToRef(Tmp.Matrix[1], Tmp.Matrix[2]);
+        Tmp.Matrix[2].multiplyToRef(Tmp.Matrix[0], Tmp.Matrix[2]);
+
+        Tmp.Matrix[2].decompose(Tmp.Vector3[0], Tmp.Quaternion[0], Tmp.Vector3[1]);
+
+        shadowLight.position.addInPlace(Tmp.Vector3[1]);
+
+        shadowLight.setDirectionToTarget(target);
     }
 
 }
